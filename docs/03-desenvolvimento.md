@@ -18,9 +18,21 @@ kubebuilder init --domain cloud104.com --repo github.com/cloud104/sampleapp-oper
 # Crie a API
 kubebuilder create api --group apps --version v1alpha1 --kind SampleApp
 
+make generate; make manifests; make install
+
 # Configure o ambiente de desenvolvimento com Tilt
 curl -sSL https://raw.githubusercontent.com/cloud104/tcloud-devops-k8s-operators-training/main/scripts/kubebuilder-tilt-setup.sh | bash
 ```
+
+Inicie o ambiente de desenvolvimento:
+
+```bash
+
+tilt up
+```
+
+- Acesse o dashboard do Tilt em <http://localhost:10350>
+- Edite o código e veja as mudanças sendo aplicadas automaticamente
 
 ## 2. Definindo a API
 
@@ -79,7 +91,7 @@ type SampleApp struct {
 Edite o arquivo `controllers/sampleapp_controller.go`:
 
 ```go
-package controllers
+package controller
 
 import (
     "context"
@@ -101,6 +113,14 @@ type SampleAppReconciler struct {
     client.Client
     Scheme *runtime.Scheme
 }
+
+// Controle de acesso
+
+// +kubebuilder:rbac:groups=apps.cloud104.com,resources=sampleapps,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps.cloud104.com,resources=sampleapps/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=apps.cloud104.com,resources=sampleapps/finalizers,verbs=update
+// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
 
 // Função principal de reconciliação
 func (r *SampleAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -277,17 +297,7 @@ spec:
   port: 5000
 ```
 
-## 5. Desenvolvendo com Tilt
-
-Inicie o ambiente de desenvolvimento:
-
-```bash
-
-tilt up
-```
-
-- Acesse o dashboard do Tilt em <http://localhost:10350>
-- Edite o código e veja as mudanças sendo aplicadas automaticamente
+## 5. Exemplo
 
 Em outro terminal, aplique o exemplo
 
