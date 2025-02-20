@@ -1,21 +1,46 @@
-# Treinamento: Operators Kubernetes
+# Treinamento de Operators Kubernetes
 
-Este repositório contém o material para o treinamento básico de desenvolvimento de Operators Kubernetes usando Kubebuilder.
+Este repositório contém material para treinamento básico de desenvolvimento de Operators Kubernetes usando Kubebuilder.
 
-## Setup Rápido
+## Início Rápido
 
-Execute este comando para configurar o ambiente:
+1. Configure o ambiente:
 
 ```bash
+# Configure KUBECONFIG dedicado
+export KUBECONFIG=$HOME/.kube/operators-training/config
+mkdir -p $(dirname $KUBECONFIG)
+
+# Instale as ferramentas necessárias
 curl -sSL https://raw.githubusercontent.com/cloud104/tcloud-devops-k8s-operators-training/main/scripts/setup.sh | bash
+
+# Aplique as alterações
+source ~/.bashrc
 ```
 
-Após a instalação:
+2. Crie um novo operator:
 
 ```bash
-source ~/.bashrc
-# Faça logout e login novamente para aplicar as mudanças do grupo docker
+mkdir sampleapp-operator
+cd sampleapp-operator
+
+# Inicialize com Kubebuilder
+kubebuilder init --domain cloud104.com --repo github.com/cloud104/sampleapp-operator
+kubebuilder create api --group apps --version v1alpha1 --kind SampleApp
+
+# Configure ambiente de desenvolvimento
+curl -sSL https://raw.githubusercontent.com/cloud104/tcloud-devops-k8s-operators-training/main/scripts/kubebuilder-tilt-setup.sh | bash
 ```
+
+## Estrutura do Treinamento
+
+- `docs/`: Documentação e guias
+  - `01-conceitos-basicos.md`: Fundamentos de Operators
+  - `02-setup-ambiente.md`: Configuração do ambiente
+  - `03-desenvolvimento.md`: Desenvolvimento do operator
+
+- `operator/sampleapp/`: Código fonte do operator exemplo
+- `scripts/`: Scripts de configuração do ambiente
 
 ## Pré-requisitos
 
@@ -24,38 +49,6 @@ source ~/.bashrc
 - Conhecimento básico de Kubernetes
 - Familiaridade com Go
 
-## Estrutura do Treinamento
-
-- `/docs`: Documentação e guias
-- `/operator`: Código do operator SampleApp
-- `/scripts`: Scripts de utilidade
-
-## Desenvolvimento do Operator
-
-O treinamento usa um exemplo prático de um operator chamado SampleApp, que demonstra:
-
-1. Criação de CRDs com Kubebuilder
-2. Implementação de um controller básico
-3. Reconciliação de recursos
-4. Uso do Tilt para desenvolvimento
-
-## Material do Treinamento
-
-Após configurar o ambiente, obtenha o material:
-
-```bash
-git clone https://github.com/cloud104/tcloud-devops-k8s-operators-training
-cd tcloud-devops-k8s-operators-training
-```
-
-## Documentação
-
-Consulte a pasta `/docs` para:
-
-- Conceitos básicos de Operators
-- Guia passo a passo do desenvolvimento
-- Referências e boas práticas
-
 ## Suporte
 
-Para dúvidas ou problemas, abra uma issue no repositório.
+Em caso de dúvidas ou problemas, abra uma issue no repositório.
