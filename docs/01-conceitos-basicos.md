@@ -36,13 +36,14 @@ spec:
 CR é uma instância do seu CRD. Exemplo:
 
 ```yaml
-apiVersion: cloud104.com/v1alpha1
+apiVersion: apps.cloud104.com/v1alpha1
 kind: SampleApp
 metadata:
-  name: minha-app
+  name: sampleapp-example
 spec:
   replicas: 3
-  image: nginx:1.14.2
+  image: fmnapoli/teste-app:v2
+  port: 5000
 ```
 
 ### 3. Controller
