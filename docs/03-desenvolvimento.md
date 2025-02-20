@@ -85,7 +85,11 @@ import (
     "context"
     appsv1 "k8s.io/api/apps/v1"
     corev1 "k8s.io/api/core/v1"
+    "k8s.io/apimachinery/pkg/api/errors"
+    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
     "k8s.io/apimachinery/pkg/runtime"
+    "k8s.io/apimachinery/pkg/types"
+    "k8s.io/apimachinery/pkg/util/intstr"
     ctrl "sigs.k8s.io/controller-runtime"
     "sigs.k8s.io/controller-runtime/pkg/client"
     "sigs.k8s.io/controller-runtime/pkg/log"
@@ -98,6 +102,7 @@ type SampleAppReconciler struct {
     Scheme *runtime.Scheme
 }
 
+// Função principal de reconciliação
 func (r *SampleAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
     log := log.FromContext(ctx)
     
@@ -107,26 +112,155 @@ func (r *SampleAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
         return ctrl.Result{}, client.IgnoreNotFound(err)
     }
     
+    log.Info("iniciando reconciliação", "name", req.NamespacedName)
+    
     // Reconciliar Deployment
     deployment, err := r.reconcileDeployment(ctx, sampleApp)
     if err != nil {
+        log.Error(err, "falha ao reconciliar deployment")
         return ctrl.Result{}, err
     }
     
     // Reconciliar Service
     if err := r.reconcileService(ctx, sampleApp); err != nil {
+        log.Error(err, "falha ao reconciliar service")
         return ctrl.Result{}, err
     }
     
     // Atualizar Status
     sampleApp.Status.AvailableReplicas = deployment.Status.AvailableReplicas
     if err := r.Status().Update(ctx, sampleApp); err != nil {
+        log.Error(err, "falha ao atualizar status")
         return ctrl.Result{}, err
     }
     
+    log.Info("reconciliação completada com sucesso")
     return ctrl.Result{}, nil
 }
+
+// Reconcilia o Deployment
+func (r *SampleAppReconciler) reconcileDeployment(ctx context.Context, app *appsv1alpha1.SampleApp) (*appsv1.Deployment, error) {
+    log := log.FromContext(ctx)
+    
+    deploy := &appsv1.Deployment{
+        ObjectMeta: metav1.ObjectMeta{
+            Name:      app.Name,
+            Namespace: app.Namespace,
+        },
+    }
+    
+    op, err := ctrl.CreateOrUpdate(ctx, r.Client, deploy, func() error {
+        r.specDeployment(app, deploy)
+        return ctrl.SetControllerReference(app, deploy, r.Scheme)
+    })
+    
+    if err != nil {
+        return nil, err
+    }
+
+    // Log da operação realizada
+    log.Info("deployment reconciliado", 
+        "name", app.Name,
+        "operation", op,
+        "replicas", app.Spec.Replicas)
+    
+    return deploy, nil
+}
+
+// Define a spec do Deployment
+func (r *SampleAppReconciler) specDeployment(app *appsv1alpha1.SampleApp, deploy *appsv1.Deployment) {
+    replicas := app.Spec.Replicas
+    
+    deploy.Spec = appsv1.DeploymentSpec{
+        Replicas: &replicas,
+        Selector: &metav1.LabelSelector{
+            MatchLabels: map[string]string{
+                "app": app.Name,
+            },
+        },
+        Template: corev1.PodTemplateSpec{
+            ObjectMeta: metav1.ObjectMeta{
+                Labels: map[string]string{
+                    "app": app.Name,
+                },
+            },
+            Spec: corev1.PodSpec{
+                Containers: []corev1.Container{
+                    {
+                        Name:  "sampleapp",
+                        Image: app.Spec.Image,
+                        Ports: []corev1.ContainerPort{
+                            {
+                                ContainerPort: app.Spec.Port,
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    }
+}
+
+// Reconcilia o Service
+func (r *SampleAppReconciler) reconcileService(ctx context.Context, app *appsv1alpha1.SampleApp) error {
+    log := log.FromContext(ctx)
+    
+    svc := &corev1.Service{
+        ObjectMeta: metav1.ObjectMeta{
+            Name:      app.Name,
+            Namespace: app.Namespace,
+        },
+    }
+    
+    op, err := ctrl.CreateOrUpdate(ctx, r.Client, svc, func() error {
+        r.specService(app, svc)
+        return ctrl.SetControllerReference(app, svc, r.Scheme)
+    })
+    
+    if err != nil {
+        return err
+    }
+
+    // Log da operação realizada
+    log.Info("service reconciliado", 
+        "name", app.Name,
+        "operation", op,
+        "port", app.Spec.Port)
+    
+    return nil
+}
+
+// Define a spec do Service
+func (r *SampleAppReconciler) specService(app *appsv1alpha1.SampleApp, svc *corev1.Service) {
+    svc.Spec = corev1.ServiceSpec{
+        Selector: map[string]string{
+            "app": app.Name,
+        },
+        Type: corev1.ServiceTypeNodePort,
+        Ports: []corev1.ServicePort{
+            {
+                Port:       app.Spec.Port,
+                TargetPort: intstr.FromInt(int(app.Spec.Port)),
+            },
+        },
+    }
+}
+
+// SetupWithManager configura o controller com o manager
+func (r *SampleAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
+    return ctrl.NewControllerManagedBy(mgr).
+        For(&appsv1alpha1.SampleApp{}).
+        Owns(&appsv1.Deployment{}).
+        Owns(&corev1.Service{}).
+        Complete(r)
+}
 ```
+
+A variável `op` do CreateOrUpdate pode ter três valores:
+
+- `OperationResultNone`: Nenhuma mudança foi necessária
+- `OperationResultCreated`: Um novo recurso foi criado
+- `OperationResultUpdated`: Um recurso existente foi atualizado
 
 ## 4. Criando um Exemplo
 
@@ -139,8 +273,8 @@ metadata:
   name: sampleapp-example
 spec:
   replicas: 3
-  image: nginx:1.14.2
-  port: 80
+  image: fmnapoli/teste-app:v2
+  port: 5000
 ```
 
 ## 5. Desenvolvendo com Tilt
