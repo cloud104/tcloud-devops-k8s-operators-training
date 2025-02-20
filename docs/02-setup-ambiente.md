@@ -29,6 +29,7 @@ curl -sSL https://raw.githubusercontent.com/cloud104/tcloud-devops-k8s-operators
 ```
 
 O script instalará:
+
 - Go 1.23+
 - Docker
 - Kind (Kubernetes in Docker)
@@ -62,36 +63,6 @@ tilt version
 # Verifique o cluster
 kubectl cluster-info  # Deve mostrar o cluster Kind
 ```
-
-## Criando um Novo Operator
-
-Após a configuração do ambiente, você pode criar um novo operator:
-
-```bash
-# Crie e entre no diretório do projeto
-mkdir sampleapp-operator
-cd sampleapp-operator
-
-# Inicialize o projeto com Kubebuilder
-kubebuilder init --domain cloud104.com --repo github.com/cloud104/sampleapp-operator
-
-# Crie a API do operator
-kubebuilder create api --group apps --version v1alpha1 --kind SampleApp
-
-# Configure o ambiente de desenvolvimento com Tilt
-curl -sSL https://raw.githubusercontent.com/cloud104/tcloud-devops-k8s-operators-training/main/scripts/kubebuilder-tilt-setup.sh | bash
-```
-
-## Desenvolvimento
-
-1. Inicie o ambiente de desenvolvimento:
-```bash
-tilt up
-```
-
-2. Acesse o dashboard do Tilt em http://localhost:10350
-
-3. Edite o código e veja as mudanças sendo aplicadas automaticamente
 
 ## Problemas Comuns
 
