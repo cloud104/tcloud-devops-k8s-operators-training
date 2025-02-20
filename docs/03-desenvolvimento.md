@@ -18,11 +18,27 @@ kubebuilder init --domain cloud104.com --repo github.com/cloud104/sampleapp-oper
 # Crie a API
 kubebuilder create api --group apps --version v1alpha1 --kind SampleApp
 
-make generate; make manifests; make install
+# Gere o código e os manifests necessários
+make generate
+make manifests
+
+# Instale os CRDs no cluster
+make install
 
 # Configure o ambiente de desenvolvimento com Tilt
 curl -sSL https://raw.githubusercontent.com/cloud104/tcloud-devops-k8s-operators-training/main/scripts/kubebuilder-tilt-setup.sh | bash
 ```
+
+## Explicação dos Comandos Make
+
+### `make generate`
+Este comando gera o código necessário para os controladores e tipos de recursos definidos. Ele utiliza as anotações Kubebuilder presentes nos arquivos de código para criar automaticamente o código boilerplate necessário.
+
+### `make manifests`
+Este comando gera os manifests YAML necessários para definir os Custom Resource Definitions (CRDs) e outras configurações do Kubernetes. Ele cria os arquivos de configuração que serão aplicados ao cluster para registrar os novos tipos de recursos.
+
+### `make install`
+Este comando aplica os CRDs gerados ao cluster Kubernetes. Ele instala os CRDs no cluster, permitindo que os novos tipos de recursos sejam reconhecidos e utilizados pelo Kubernetes.
 
 Inicie o ambiente de desenvolvimento:
 
