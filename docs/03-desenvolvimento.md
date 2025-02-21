@@ -2,9 +2,9 @@
 
 Este guia aborda o desenvolvimento completo do nosso Operator **SampleApp** usando **Kubebuilder**.
 
----
+## 1. Configuração Inicial
 
-## 1. Criando o Projeto
+### 1.1 Criando o Projeto
 
 ```bash
 # Certifique-se que o KUBECONFIG está configurado
@@ -19,49 +19,63 @@ kubebuilder init --domain cloud104.com --repo github.com/cloud104/sampleapp-oper
 
 # Crie a API
 kubebuilder create api --group apps --version v1alpha1 --kind SampleApp
+```
 
-# Gere o código e os manifests necessários
+### 1.2 Verificação e Instalação dos CRDs
+
+#### Verificação Inicial
+
+```bash
+# Teste antes da instalação
+kubectl get sampleapp -A
+```
+
+#### Geração e Instalação
+
+```bash
+# Gerar códigos e manifestos
 make generate
 make manifests
 
-# Instale os CRDs no cluster
+# Instalar CRDs no cluster
 make install
-
-# Configure o ambiente de desenvolvimento com Tilt
-curl -sSL https://raw.githubusercontent.com/cloud104/tcloud-devops-k8s-operators-training/main/scripts/kubebuilder-tilt-setup.sh | bash
 ```
 
----
-
-## Explicação dos Comandos `Make`
-
-### `make generate`
-Este comando gera o código necessário para os controladores e tipos de recursos definidos. Ele utiliza as anotações Kubebuilder presentes nos arquivos de código para criar automaticamente o código boilerplate necessário.
-
-### `make manifests`
-Este comando gera os manifests YAML necessários para definir os **Custom Resource Definitions (CRDs)** e outras configurações do Kubernetes. Ele cria os arquivos de configuração que serão aplicados ao cluster para registrar os novos tipos de recursos.
-
-### `make install`
-Este comando aplica os CRDs gerados ao cluster Kubernetes. Ele instala os CRDs no cluster, permitindo que os novos tipos de recursos sejam reconhecidos e utilizados pelo Kubernetes.
-
----
-
-## Iniciando o Ambiente de Desenvolvimento
+#### Verificação Final
 
 ```bash
+# Teste após a instalação
+kubectl get sampleapp -A
+```
+
+### 1.3 Comandos Make Explicados
+
+| Comando | Descrição |
+|---------|-----------|
+| `make generate` | Gera código boilerplate baseado nas anotações Kubebuilder |
+| `make manifests` | Gera os manifestos YAML para CRDs e configurações |
+| `make install` | Aplica os CRDs gerados ao cluster Kubernetes |
+
+## 2. Ambiente de Desenvolvimento
+
+### 2.1 Configuração do Tilt
+
+```bash
+# Configurar ambiente Tilt
+curl -sSL https://raw.githubusercontent.com/cloud104/tcloud-devops-k8s-operators-training/main/scripts/kubebuilder-tilt-setup.sh | bash
+
+# Iniciar Tilt
 tilt up
 ```
 
-- Acesse o dashboard do Tilt em [http://localhost:10350](http://localhost:10350).
-- Edite o código e veja as mudanças sendo aplicadas automaticamente.
+> **Nota**: Acesse o dashboard do Tilt em [http://localhost:10350](http://localhost:10350)
 
----
+## 3. Implementação
 
-## 2. Definindo a API
-
-Edite o arquivo `api/v1alpha1/sampleapp_types.go`:
+### 3.1 Definição da API
 
 ```go
+// filepath: api/v1alpha1/sampleapp_types.go
 package v1alpha1
 
 import (
@@ -109,11 +123,10 @@ type SampleApp struct {
 }
 ```
 
-## 3. Implementando o Controller
-
-Edite o arquivo `controllers/sampleapp_controller.go`:
+### 3.2 Implementação do Controller
 
 ```go
+// filepath: controllers/sampleapp_controller.go
 package controller
 
 import (
@@ -299,17 +312,12 @@ func (r *SampleAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 ```
 
-A variável `op` do CreateOrUpdate pode ter três valores:
+## 4. Teste e Implantação
 
-- `OperationResultNone`: Nenhuma mudança foi necessária
-- `OperationResultCreated`: Um novo recurso foi criado
-- `OperationResultUpdated`: Um recurso existente foi atualizado
-
-## 4. Criando um Exemplo
-
-Crie o arquivo `config/samples/apps_v1alpha1_sampleapp.yaml`:
+### 4.1 Exemplo de Recurso
 
 ```yaml
+// filepath: config/samples/apps_v1alpha1_sampleapp.yaml
 apiVersion: apps.cloud104.com/v1alpha1
 kind: SampleApp
 metadata:
@@ -320,39 +328,47 @@ spec:
   port: 5000
 ```
 
-## 5. Exemplo
-
-Em outro terminal, aplique o exemplo
+### 4.2 Verificação dos Recursos
 
 ```bash
+# Aplicar o exemplo
 kubectl apply -f config/samples/apps_v1alpha1_sampleapp.yaml
 
-# Verifique os recursos
+# Verificar recursos criados
 kubectl get sampleapp
 kubectl get deployments
 kubectl get services
 kubectl get pods
 ```
 
-## 6. Testando o Operator
+### 4.3 Testes do Operator
 
 ```bash
-# Verifique o status
+# Verificar status
 kubectl get sampleapp sampleapp-example -o yaml
 
-# Modifique o número de réplicas
+# Modificar réplicas
 kubectl patch sampleapp sampleapp-example --type='json' \
   -p='[{"op": "replace", "path": "/spec/replicas", "value":5}]'
 
-# Observe a reconciliação acontecendo
+# Monitorar pods
 kubectl get pods -w
 ```
 
-## Próximos Passos
+## 5. Próximos Passos
 
-1. Adicione validações customizadas
-2. Implemente métricas
-3. Adicione mais funcionalidades como:
+### Melhorias Sugeridas
+
+1. **Validações Customizadas**
+   - Implementar validações específicas do domínio
+   - Adicionar webhooks de validação
+
+2. **Monitoramento**
+   - Implementar métricas customizadas
+   - Integrar com Prometheus
+
+3. **Funcionalidades Adicionais**
    - Health checks
-   - Recursos configuráveis
-   - Backup/restore
+   - Configuração dinâmica de recursos
+   - Backup e restore
+   - Logging avançado
