@@ -4,11 +4,23 @@ Este guia aborda o desenvolvimento completo do nosso Operator **SampleApp** usan
 
 ## 1. Configuração Inicial
 
-### 1.1 Criando o Projeto
+### 1.1 Criando o Cluster de Desenvolvimento
+
+```bash
+# Execute o script de setup do cluster Kind e registry
+export KUBECONFIG=$HOME/.kube/k8s-operators-lab-config
+curl -sSL https://raw.githubusercontent.com/cloud104/tcloud-devops-k8s-operators-training/main/scripts/setup-cluster.sh | bash
+
+# Verifique o cluster
+kubectl cluster-info  # Deve mostrar o cluster Kind
+```
+
+### 1.2 Criando o Projeto
 
 ```bash
 # Certifique-se que o KUBECONFIG está configurado
 echo $KUBECONFIG
+export KUBECONFIG=$HOME/.kube/k8s-operators-lab-config
 
 # Crie e entre no diretório do projeto
 mkdir sampleapp-operator
@@ -21,11 +33,14 @@ kubebuilder init --domain cloud104.com --repo github.com/cloud104/sampleapp-oper
 kubebuilder create api --group apps --version v1alpha1 --kind SampleApp
 ```
 
-### 1.2 Verificação e Instalação dos CRDs
+### 1.3 Verificação e Instalação dos CRDs
 
 #### Verificação Inicial
 
 ```bash
+# Verifique o cluster
+kubectl cluster-info  # Deve mostrar o cluster Kind
+
 # Teste antes da instalação
 kubectl get sampleapp -A
 ```
@@ -36,6 +51,9 @@ kubectl get sampleapp -A
 # Gerar códigos e manifestos
 make generate
 make manifests
+
+# Verifique o cluster
+kubectl cluster-info  # Deve mostrar o cluster Kind
 
 # Instalar CRDs no cluster
 make install

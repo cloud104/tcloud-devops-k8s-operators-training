@@ -26,13 +26,6 @@ Execute o script de setup que instalará todas as ferramentas necessárias:
 ```bash
 curl -sSL https://raw.githubusercontent.com/cloud104/tcloud-devops-k8s-operators-training/main/scripts/setup-tools.sh | bash
 ```
-
-Execute o script de setup do cluster Kind e registry
-
-```bash
-curl -sSL https://raw.githubusercontent.com/cloud104/tcloud-devops-k8s-operators-training/main/scripts/setup-cluster.sh | bash
-```
-
 O script instalará:
 
 - Go 1.23+
