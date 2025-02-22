@@ -8,8 +8,7 @@ Este repositório contém material para treinamento básico de desenvolvimento d
 
 ```bash
 # Configure KUBECONFIG dedicado
-export KUBECONFIG=$HOME/.kube/operators-training-config
-
+export KUBECONFIG=$HOME/.kube/k8s-operators-lab-config
 
 # Instale as ferramentas necessárias
 curl -sSL https://raw.githubusercontent.com/cloud104/tcloud-devops-k8s-operators-training/main/scripts/setup-tools.sh | bash
@@ -19,19 +18,6 @@ source ~/.bashrc
 
 # Configure o cluster Kind e registry
 curl -sSL https://raw.githubusercontent.com/cloud104/tcloud-devops-k8s-operators-training/main/scripts/setup-cluster.sh | bash
-
-# Instale as ferramentas necessárias
-
-curl -sSL <https://raw.githubusercontent.com/cloud104/tcloud-devops-k8s-operators-training/main/scripts/setup-tools.sh> | bash
-
-# Aplique as alterações
-
-source ~/.bashrc
-
-# Configure o cluster Kind e registry
-
-curl -sSL <https://raw.githubusercontent.com/cloud104/tcloud-devops-k8s-operators-training/main/scripts/setup-cluster.sh> | bash
-
 ```
 
 2. Crie um novo operator:
