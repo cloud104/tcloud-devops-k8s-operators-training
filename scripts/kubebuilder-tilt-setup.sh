@@ -335,7 +335,7 @@ EOL
 # Geração do kustomization para overlay de desenvolvimento
 # Aplica patches específicos para ambiente de dev
 log "Criando kustomization para desenvolvimento..."
-cat > tilt-dev/kustomization.yaml << 'EOL'
+cat > tilt-dev/kustomization.yaml << EOL
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
@@ -350,7 +350,7 @@ patches:
 # Configuração de imagens
 images:
 - name: controller
-  newName: controller
+  newName: ${CONTROLLER_NAME}
   newTag: latest
 EOL
 
@@ -362,7 +362,7 @@ cat > Tiltfile << EOL
 load('ext://restart_process', 'docker_build_with_restart')
 
 # Configurações base
-IMG = 'controller:latest'
+IMG = '${CONTROLLER_NAME}:latest'
 REGISTRY = '${REGISTRY}'
 
 # Configura registry efêmero
