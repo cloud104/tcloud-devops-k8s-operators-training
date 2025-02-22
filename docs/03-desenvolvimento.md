@@ -500,4 +500,3 @@ kubectl patch sampleapp sampleapp-example --type='json' \
   -p='[{"op": "replace", "path": "/spec/replicas", "value":5}]' -n default
 kubectl get pods -w -n default
 ```
-
