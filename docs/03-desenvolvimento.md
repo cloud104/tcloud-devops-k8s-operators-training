@@ -456,6 +456,23 @@ tilt up
 
 > **Nota**: Acesse o dashboard do Tilt em [http://localhost:10350](http://localhost:10350)
 
+- Configurar o debugger do VSCode (.vscode/launch.json)
+
+```json
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Attach to DLV-DAP",
+            "type": "go",
+            "request": "attach",
+            "mode": "remote",
+            "port": 40000
+        }
+    ]
+}
+```
+
 ## 4. Teste e Implantação
 
 ### 4.1 Exemplo de Recurso
