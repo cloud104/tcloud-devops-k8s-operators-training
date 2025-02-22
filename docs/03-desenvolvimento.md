@@ -148,17 +148,11 @@ Configurar ambiente Tilt
 curl -sSL https://raw.githubusercontent.com/cloud104/tcloud-devops-k8s-operators-training/main/scripts/kubebuilder-tilt-setup.sh | bash
 ```
 
-Iniciar Tilt
-
-```bash
-tilt up
-```
-
-> **Nota**: Acesse o dashboard do Tilt em [http://localhost:10350](http://localhost:10350)
-
 ## 3. Implementação
 
 ### 3.1 Definição da API
+
+Editar o arquivo api/v1alpha1/sampleapp_types.go
 
 ```go
 package v1alpha1
@@ -221,6 +215,12 @@ func init() {
 }
 ```
 
+Regerar e instalar
+
+```bash
+make generate; make manifests; make install
+```
+
 Ajustando o manifesto (config/samples/apps_v1alpha1_sampleapp.yaml)
 
 ```yaml
@@ -254,8 +254,9 @@ kubectl delete -f config/samples/apps_v1alpha1_sampleapp.yaml -n default
 
 ### 3.2 Implementação do Controller
 
+Editar o arquivo controllers/sampleapp_controller.go
+
 ```go
-// filepath: controllers/sampleapp_controller.go
 package controller
 
 import (
@@ -441,6 +442,20 @@ func (r *SampleAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 ```
 
+Executando o controller localmente
+
+```bash
+make run
+```
+
+Executando o controller no cluster (Tilt)
+
+```bash
+tilt up
+```
+
+> **Nota**: Acesse o dashboard do Tilt em [http://localhost:10350](http://localhost:10350)
+
 ## 4. Teste e Implantação
 
 ### 4.1 Exemplo de Recurso
@@ -458,29 +473,32 @@ spec:
 
 ### 4.2 Verificação dos Recursos
 
-```bash
-# Aplicar o exemplo
-kubectl apply -f config/samples/apps_v1alpha1_sampleapp.yaml
+Aplicar o exemplo
 
-# Verificar recursos criados
-kubectl get sampleapp
-kubectl get deployments
-kubectl get services
-kubectl get pods
+```bash
+kubectl apply -f config/samples/apps_v1alpha1_sampleapp.yaml
+```
+
+Verificar recursos criados
+
+```bash
+kubectl get sampleapp,deployments,services,pods
 ```
 
 ### 4.3 Testes do Operator
 
+Verificar status
+
 ```bash
-# Verificar status
 kubectl get sampleapp sampleapp-example -o yaml
+```
 
-# Modificar réplicas
+Modificar réplicas e Monitorar pods
+
+```bash
 kubectl patch sampleapp sampleapp-example --type='json' \
-  -p='[{"op": "replace", "path": "/spec/replicas", "value":5}]'
-
-# Monitorar pods
-kubectl get pods -w
+  -p='[{"op": "replace", "path": "/spec/replicas", "value":5}]' -n default
+kubectl get pods -w -n default
 ```
 
 ## 5. Próximos Passos
