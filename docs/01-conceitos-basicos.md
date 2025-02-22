@@ -2,14 +2,65 @@
 
 ## O que é um Operator?
 
-Um Operator é um padrão de software que estende o Kubernetes para gerenciar aplicações e seus componentes. Ele encapsula o conhecimento operacional humano em código, automatizando tarefas complexas de gerenciamento de aplicações.
+Um Operator é um padrão de software que estende o Kubernetes para gerenciar aplicações e seus componentes. Ele encapsula o conhecimento operacional humano em código, automatizando tarefas complexas de gerenciamento de aplicações através de dois componentes fundamentais: Custom Resource Definitions (CRDs) e Controllers.
+
+Os CRDs permitem definir novos tipos de recursos personalizados no Kubernetes, enquanto os Custom Resources (CRs) são instâncias desses recursos que representam o estado desejado da aplicação. O Controller observa esses recursos e executa ações para garantir que o estado atual do cluster corresponda ao estado desejado descrito nos CRs.
+
+```mermaid
+flowchart TD
+    subgraph OPERATOR ["Padrão Operator"]
+        CRD("Custom Resource Definition (CRD)
+        Define novos tipos de recursos")
+        
+        CR("Custom Resource (CR)
+        Descreve o estado desejado")
+        
+        CTRL("Controller
+        Implementa a lógica de automação")
+        
+        LOOP("Ciclo de Reconciliação
+        Watch → Analyze → Act → Status")
+    end
+    
+    subgraph BENEFITS ["Características"]
+        AUTO("Automação de tarefas
+        operacionais repetitivas")
+        
+        LIFECYCLE("Gerenciamento do ciclo 
+        de vida completo")
+        
+        MONITOR("Monitoramento e
+        recuperação automática")
+        
+        UPDATE("Atualizações e
+        backups coordenados")
+    end
+    
+    OPS("Conhecimento Operacional") --> OPERATOR
+    OPERATOR --> BENEFITS
+    
+    CRD --> CR
+    CTRL --> LOOP
+    LOOP -.-> CR
+    
+    style OPERATOR fill:#f0f0f0,stroke:#333,stroke-width:2px
+    style BENEFITS fill:#e6f7ff,stroke:#333,stroke-width:2px
+    style OPS fill:#f5f5f5,stroke:#333
+    style CRD fill:#ffccff,stroke:#cc66ff
+    style CR fill:#ccccff,stroke:#6666ff
+    style CTRL fill:#ffffcc,stroke:#cccc00
+    style LOOP fill:#ccffcc,stroke:#00cc00
+    style AUTO,LIFECYCLE,MONITOR,UPDATE fill:#e6f7ff,stroke:none
+```
 
 ### Principais Características
 
-- Automação de tarefas operacionais repetitivas
-- Gerenciamento do ciclo de vida completo da aplicação
-- Monitoramento e recuperação automática
-- Atualizações e backups coordenados
+- **Automação de tarefas operacionais repetitivas** através do ciclo de reconciliação do Controller
+- **Gerenciamento do ciclo de vida completo da aplicação** usando CRs para descrever cada estado desejado
+- **Monitoramento e recuperação automática** pelo Controller que constantemente compara e corrige discrepâncias
+- **Atualizações e backups coordenados** definidos como operações declarativas em CRs
+
+Este padrão permite que desenvolvedores e operadores codifiquem seu conhecimento de domínio específico sobre como gerenciar uma aplicação, convertendo operações manuais em processos automatizados que seguem as melhores práticas do Kubernetes.
 
 ### Arquitetura do Kubernetes
 
@@ -102,7 +153,7 @@ flowchart TD
     style RESOURCES fill:#e0e0ff,stroke:#6666ff
 ```
 
-### Arquitetura de um Operator Detalhada
+### Arquitetura detalhada de um Operator
 
 ```mermaid
 flowchart TD
