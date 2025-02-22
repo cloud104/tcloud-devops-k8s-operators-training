@@ -124,6 +124,12 @@ Detalhar o sampleapp (sampleapp-sample) criado
 kubectl get sampleapp sampleapp-sample -o yaml -n default
 ```
 
+Excluindo o recurso
+
+```bash
+kubectl delete -f config/samples/apps_v1alpha1_sampleapp.yaml -n default
+```
+
 ### 1.4 Comandos Make Explicados
 
 | Comando | Descrição |
@@ -155,36 +161,35 @@ tilt up
 ### 3.1 Definição da API
 
 ```go
-// filepath: api/v1alpha1/sampleapp_types.go
 package v1alpha1
 
 import (
-    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+ metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // SampleAppSpec define o estado desejado
 type SampleAppSpec struct {
-    // +kubebuilder:validation:Minimum=1
-    // +kubebuilder:validation:Maximum=10
-    // +kubebuilder:default=1
-    Replicas int32 `json:"replicas,omitempty"`
+ // +kubebuilder:validation:Minimum=1
+ // +kubebuilder:validation:Maximum=10
+ // +kubebuilder:default=1
+ Replicas int32 `json:"replicas,omitempty"`
 
-    // +kubebuilder:validation:Required
-    Image string `json:"image"`
+ // +kubebuilder:validation:Required
+ Image string `json:"image"`
 
-    // +kubebuilder:validation:Minimum=1
-    // +kubebuilder:validation:Maximum=65535
-    // +kubebuilder:default=80
-    Port int32 `json:"port,omitempty"`
+ // +kubebuilder:validation:Minimum=1
+ // +kubebuilder:validation:Maximum=65535
+ // +kubebuilder:default=80
+ Port int32 `json:"port,omitempty"`
 }
 
 // SampleAppStatus define o estado observado
 type SampleAppStatus struct {
-    // +optional
-    AvailableReplicas int32 `json:"availableReplicas"`
+ // +optional
+ AvailableReplicas int32 `json:"availableReplicas"`
 
-    // +optional
-    Conditions []metav1.Condition `json:"conditions,omitempty"`
+ // +optional
+ Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -195,12 +200,56 @@ type SampleAppStatus struct {
 
 // SampleApp é o Schema para a API sampleapps
 type SampleApp struct {
-    metav1.TypeMeta   `json:",inline"`
-    metav1.ObjectMeta `json:"metadata,omitempty"`
+ metav1.TypeMeta   `json:",inline"`
+ metav1.ObjectMeta `json:"metadata,omitempty"`
 
-    Spec   SampleAppSpec   `json:"spec,omitempty"`
-    Status SampleAppStatus `json:"status,omitempty"`
+ Spec   SampleAppSpec   `json:"spec,omitempty"`
+ Status SampleAppStatus `json:"status,omitempty"`
 }
+
+// +kubebuilder:object:root=true
+
+// SampleAppList contém uma lista de SampleApp.
+type SampleAppList struct {
+ metav1.TypeMeta `json:",inline"`
+ metav1.ListMeta `json:"metadata,omitempty"`
+ Items           []SampleApp `json:"items"`
+}
+
+func init() {
+ SchemeBuilder.Register(&SampleApp{}, &SampleAppList{})
+}
+```
+
+Ajustando o manifesto (config/samples/apps_v1alpha1_sampleapp.yaml)
+
+```yaml
+apiVersion: apps.cloud104.com/v1alpha1
+kind: SampleApp
+metadata:
+  name: sampleapp-example
+spec:
+  replicas: 1
+  image: fmnapoli/teste-app:v1
+  port: 5000
+```
+
+Teste aplicando manifesto após atualização do do CRD
+
+```bash
+kubectl apply -f config/samples/apps_v1alpha1_sampleapp.yaml -n default
+```
+
+Detalhar o sampleapp (sampleapp-sample) criado
+
+```bash
+kubectl get sampleapp sampleapp-sample -o yaml -n default
+```
+
+Excluindo o recurso
+
+```bash
+kubectl delete -f config/samples/apps_v1alpha1_sampleapp.yaml -n default
 ```
 
 ### 3.2 Implementação do Controller
@@ -397,7 +446,6 @@ func (r *SampleAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 ### 4.1 Exemplo de Recurso
 
 ```yaml
-// filepath: config/samples/apps_v1alpha1_sampleapp.yaml
 apiVersion: apps.cloud104.com/v1alpha1
 kind: SampleApp
 metadata:
