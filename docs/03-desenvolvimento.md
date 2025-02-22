@@ -6,83 +6,145 @@ Este guia aborda o desenvolvimento completo do nosso Operator **SampleApp** usan
 
 ### 1.1 Criando o Cluster de Desenvolvimento
 
+Execute o script de setup do cluster Kind e registry
+
 ```bash
-# Execute o script de setup do cluster Kind e registry
 export KUBECONFIG=$HOME/.kube/k8s-operators-lab-config
 curl -sSL https://raw.githubusercontent.com/cloud104/tcloud-devops-k8s-operators-training/main/scripts/setup-cluster.sh | bash
+```
 
-# Verifique o cluster
+Verifique o cluster
+
+```bash
 kubectl cluster-info  # Deve mostrar o cluster Kind
 ```
 
 ### 1.2 Criando o Projeto
 
+Certifique-se que o KUBECONFIG está configurado
+
 ```bash
-# Certifique-se que o KUBECONFIG está configurado
 echo $KUBECONFIG
 export KUBECONFIG=$HOME/.kube/k8s-operators-lab-config
+```
 
-# Crie e entre no diretório do projeto
+Crie e entre no diretório do projeto
+
+```bash
 mkdir sampleapp-operator
 cd sampleapp-operator
+```
 
-# Inicialize o projeto com Kubebuilder
+Inicialize o projeto com Kubebuilder
+
+```bash
 kubebuilder init --domain cloud104.com --repo github.com/cloud104/sampleapp-operator
+```
 
-# Crie a API
+Crie a API (CRD & Controller)
+
+```bash
 kubebuilder create api --group apps --version v1alpha1 --kind SampleApp
+```
+
+Responder "y"
+
+```bash
+INFO Create Resource [y/n]
+y
+INFO Create Controller [y/n]
+y
+```
+
+Abrir seu editor de código (ex. vscode)
+
+```bash
+code .
 ```
 
 ### 1.3 Verificação e Instalação dos CRDs
 
-#### Verificação Inicial
+#### Geração e Instalação
+
+Gerar códigos e manifestos
 
 ```bash
-# Verifique o cluster
-kubectl cluster-info  # Deve mostrar o cluster Kind
+make manifests
+make generate
+```
 
-# Teste antes da instalação
+Verifique o cluster
+
+```bash
+export KUBECONFIG=$HOME/.kube/k8s-operators-lab-config
+kubectl cluster-info  # Deve mostrar o cluster Kind
+```
+
+Teste antes da instalação
+
+```bash
 kubectl get sampleapp -A
 ```
 
-#### Geração e Instalação
+Instalar CRDs no cluster
 
 ```bash
-# Gerar códigos e manifestos
-make generate
-make manifests
-
-# Verifique o cluster
-kubectl cluster-info  # Deve mostrar o cluster Kind
-
-# Instalar CRDs no cluster
 make install
 ```
 
 #### Verificação Final
 
+Teste após a instalação
+
 ```bash
-# Teste após a instalação
 kubectl get sampleapp -A
 ```
 
-### 1.3 Comandos Make Explicados
+Listar o CRD
+
+```bash
+kubectl get crds sampleapps.apps.cloud104.com
+```
+
+Teste aplicando manifesto após a instalação
+
+```bash
+kubectl apply -f config/samples/apps_v1alpha1_sampleapp.yaml -n default
+```
+
+Listar todos os sampleapp em todos os namespaces
+
+```bash
+kubectl get sampleapp -A
+```
+
+Detalhar o sampleapp (sampleapp-sample) criado
+
+```bash
+kubectl get sampleapp sampleapp-sample -o yaml -n default
+```
+
+### 1.4 Comandos Make Explicados
 
 | Comando | Descrição |
 |---------|-----------|
-| `make generate` | Gera código boilerplate baseado nas anotações Kubebuilder |
 | `make manifests` | Gera os manifestos YAML para CRDs e configurações |
+| `make generate` | Gera código boilerplate baseado nas anotações Kubebuilder |
 | `make install` | Aplica os CRDs gerados ao cluster Kubernetes |
 
 ## 2. Ambiente de Desenvolvimento
 
 ### 2.1 Configuração do Tilt
 
-```bash
-# Configurar ambiente Tilt
-curl -sSL https://raw.githubusercontent.com/cloud104/tcloud-devops-k8s-operators-training/main/scripts/kubebuilder-tilt-setup.sh | bash
+Configurar ambiente Tilt
 
-# Iniciar Tilt
+```bash
+curl -sSL https://raw.githubusercontent.com/cloud104/tcloud-devops-k8s-operators-training/main/scripts/kubebuilder-tilt-setup.sh | bash
+```
+
+Iniciar Tilt
+
+```bash
 tilt up
 ```
 
