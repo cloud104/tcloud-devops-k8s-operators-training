@@ -11,7 +11,197 @@ Um Operator é um padrão de software que estende o Kubernetes para gerenciar ap
 - Monitoramento e recuperação automática
 - Atualizações e backups coordenados
 
-## Arquitetura de um Operator
+### Arquitetura do Kubernetes
+
+```mermaid
+flowchart TD
+    USER("Usuário / Cliente") -->|"kubectl / API Calls"| API
+    
+    subgraph CP ["Control Plane"]
+        API("API Server") 
+        ETCD("etcd")
+        SCHED("Scheduler")
+        CM("Controller Manager")
+        
+        API -->|"Armazena estado"| ETCD
+        API <-->|"Agenda pods"| SCHED
+        API <-->|"Monitora recursos"| CM
+    end
+    
+    subgraph DP ["Data Plane"]
+        subgraph CN ["Componentes de Node"]
+            KUBELET("Kubelet")
+            PROXY("Kube Proxy")
+            CRI("Container Runtime")
+            
+            KUBELET -->|"Gerencia containers"| CRI
+        end
+        
+        N1("Node 1")
+        N2("Node 2")
+        N3("Node N")
+        
+        PROXY -->|"Configura rede"| N1
+        PROXY -->|"Configura rede"| N2
+        PROXY -->|"Configura rede"| N3
+    end
+    
+    API <-->|"API calls"| KUBELET
+    
+    %% Posicionamento dos subgráficos
+    CP ~~~ DP
+    
+    style USER fill:#f5f5f5,stroke:#333
+    style API fill:#ffffcc,stroke:#cccc00
+    style ETCD fill:#ccffcc,stroke:#00cc00
+    style SCHED fill:#ffcccc,stroke:#cc0000
+    style CM fill:#ccccff,stroke:#0000cc
+    style KUBELET fill:#ffccff,stroke:#cc00cc
+    style PROXY fill:#ccffff,stroke:#00cccc
+    style CRI fill:#ffeecc,stroke:#cc9900
+    style N1,N2,N3 fill:#eeeeee,stroke:#666666
+    style CP fill:#f9f9f9,stroke:#333,stroke-width:2px
+    style DP fill:#f0f0f0,stroke:#333,stroke-width:2px
+    style CN fill:#f5f5f5,stroke:#333,stroke-dasharray:5,5
+```
+
+### Arquitetura de um Operator
+
+```mermaid
+flowchart TD
+    USER("Usuário") -->|"kubectl apply"| CR
+    
+    CRD("Custom Resource Definition")
+    CR("Custom Resource")
+    API("API Server")
+    
+    CRD -->|"Registra em"| API
+    CR -->|"Validado por"| CRD
+    CR -->|"Armazenado em"| API
+    
+    subgraph CTRL ["Controller (Operator)"]
+        WATCH("Watch") -->|"Detecta mudanças"| ANALYZE
+        ANALYZE("Analyze") -->|"Compara estados"| ACT
+        ACT("Act") -->|"Executa ações"| STATUS
+        STATUS("Status") -.->|"Reconciliation Loop"| WATCH
+    end
+    
+    API -->|"Envia eventos"| WATCH
+    ACT -->|"Cria/Atualiza"| RESOURCES("Recursos Kubernetes")
+    STATUS -->|"Atualiza status"| CR
+    
+    style USER fill:#f5f5f5,stroke:#333
+    style CRD fill:#ffccff,stroke:#cc66ff
+    style CR fill:#ccccff,stroke:#6666ff
+    style API fill:#ffffcc,stroke:#cccc00
+    style CTRL fill:#f5f5f5,stroke:#333,stroke-width:2px
+    style WATCH fill:#333,stroke:#000,color:white
+    style ANALYZE fill:#333,stroke:#000,color:white
+    style ACT fill:#333,stroke:#000,color:white
+    style STATUS fill:#333,stroke:#000,color:white
+    style RESOURCES fill:#e0e0ff,stroke:#6666ff
+```
+
+### Arquitetura de um Operator Detalhada
+
+```mermaid
+flowchart TD
+    %% Componentes principais do Operator
+    USER["Usuário/Administrador"] -->|"kubectl create/apply"| CR
+    
+    %% Custom Resources e CRDs
+    subgraph "Definição e Instância"
+        CRD["Custom Resource Definition (CRD)
+        Define a estrutura do recurso"]
+        CR["Custom Resource (CR)
+        Define o estado desejado"]
+    end
+    
+    %% API Server e ETCD
+    API["Kubernetes API Server"] --> ETCD["ETCD
+    Armazenamento persistente"]
+    
+    %% Controller e Reconciliation Loop
+    subgraph CTRL ["Controller (Operator)"]
+        WATCH["Watch
+        Monitora mudanças nos recursos"]
+        
+        QUEUE["Queue
+        Armazena eventos para processamento"]
+        
+        RECONCILE["Reconcile
+        Função principal do Operator"]
+        
+        CURRENT["Estado Atual
+        O que existe no cluster"]
+        
+        DESIRED["Estado Desejado
+        Definido pelo CR"]
+        
+        ACTIONS["Ações
+        Criação/Atualização/Exclusão"]
+        
+        STATUS["Status
+        Atualiza o status do CR"]
+        
+        %% Fluxo do Controller
+        WATCH -->|"Detecta eventos"| QUEUE
+        QUEUE -->|"Processa eventos"| RECONCILE
+        RECONCILE -->|"Consulta"| CURRENT
+        RECONCILE -->|"Consulta"| DESIRED
+        RECONCILE -->|"Executa"| ACTIONS
+        ACTIONS -->|"Cria/Atualiza/Deleta"| RESOURCES
+        RECONCILE -->|"Atualiza"| STATUS
+        STATUS -->|"Requeue se necessário"| QUEUE
+    end
+    
+    %% Recursos gerenciados pelo Operator
+    subgraph RESOURCES ["Recursos Gerenciados"]
+        DEPLOY["Deployments"]
+        SVC["Services"]
+        PVC["PersistentVolumeClaims"]
+        SECRET["Secrets"]
+        CM["ConfigMaps"]
+        OTHER["Outros recursos..."]
+    end
+    
+    %% Mecanismos adicionais
+    subgraph MECHANISMS ["Mecanismos de Segurança"]
+        FINALIZER["Finalizers
+        Garante limpeza adequada"]
+        
+        OWNER["Owner References
+        Gerencia hierarquia e deleção em cascata"]
+    end
+    
+    %% Conexões entre componentes principais
+    CRD -->|"Registra"| API
+    CR -->|"É validado por"| CRD
+    CR -->|"Armazenado em"| API
+    API -->|"Eventos"| WATCH
+    ACTIONS -->|"Atualiza"| API
+    RESOURCES -->|"Contém"| OWNER
+    CR -->|"Contém"| FINALIZER
+    
+    %% Estilo dos componentes
+    classDef user fill:#f9f9f9,stroke:#333,stroke-width:1px
+    classDef definition fill:#ffccff,stroke:#cc66ff,stroke-width:1px
+    classDef apiserver fill:#ffffcc,stroke:#cccc00,stroke-width:1px
+    classDef storage fill:#ccffcc,stroke:#00cc00,stroke-width:1px
+    classDef controller fill:#f0f0f0,stroke:#333,stroke-width:2px
+    classDef process fill:#333333,stroke:#000000,color:white
+    classDef resources fill:#ccccff,stroke:#6666ff,stroke-width:1px
+    classDef mechanisms fill:#ffddcc,stroke:#ff6600,stroke-width:1px
+    
+    class USER user
+    class CRD,CR definition
+    class API apiserver
+    class ETCD storage
+    class CTRL controller
+    class WATCH,QUEUE,RECONCILE,CURRENT,DESIRED,ACTIONS,STATUS process
+    class DEPLOY,SVC,PVC,SECRET,CM,OTHER resources
+    class FINALIZER,OWNER mechanisms
+```
 
 ### 1. Custom Resource Definition (CRD)
 
