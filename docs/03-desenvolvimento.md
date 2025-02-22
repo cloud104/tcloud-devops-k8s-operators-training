@@ -501,20 +501,3 @@ kubectl patch sampleapp sampleapp-example --type='json' \
 kubectl get pods -w -n default
 ```
 
-## 5. Próximos Passos
-
-### Melhorias Sugeridas
-
-1. **Validações Customizadas**
-   - Implementar validações específicas do domínio
-   - Adicionar webhooks de validação
-
-2. **Monitoramento**
-   - Implementar métricas customizadas
-   - Integrar com Prometheus
-
-3. **Funcionalidades Adicionais**
-   - Health checks
-   - Configuração dinâmica de recursos
-   - Backup e restore
-   - Logging avançado
