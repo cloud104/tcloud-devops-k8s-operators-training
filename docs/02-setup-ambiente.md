@@ -16,7 +16,7 @@ Primeiro, configure um KUBECONFIG específico para este ambiente de desenvolvime
 
 ```bash
 # Configure o KUBECONFIG para um arquivo dedicado
-export KUBECONFIG=$HOME/.kube/operators-training/config
+export KUBECONFIG=$HOME/.kube/k8s-operators-lab-config
 ```
 
 ### 2. Instale as Ferramentas e Crie o Cluster
@@ -48,9 +48,9 @@ O script instalará:
 ```bash
 # Carregue as novas configurações do ambiente
 source ~/.bashrc
-
-# IMPORTANTE: Faça logout e login para aplicar as mudanças do grupo docker
 ```
+
+- IMPORTANTE: Faça logout e login para aplicar as mudanças do grupo docker
 
 ### 4. Verifique a Instalação
 
