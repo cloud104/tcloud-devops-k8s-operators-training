@@ -19,7 +19,6 @@ source ~/.bashrc
 
 # Configure o cluster Kind e registry
 curl -sSL https://raw.githubusercontent.com/cloud104/tcloud-devops-k8s-operators-training/main/scripts/setup-cluster.sh | bash
-```
 
 # Instale as ferramentas necessárias
 
