@@ -17,15 +17,20 @@ Primeiro, configure um KUBECONFIG específico para este ambiente de desenvolvime
 ```bash
 # Configure o KUBECONFIG para um arquivo dedicado
 export KUBECONFIG=$HOME/.kube/operators-training/config
-mkdir -p $(dirname $KUBECONFIG)
 ```
 
-### 2. Instale as Ferramentas Necessárias
+### 2. Instale as Ferramentas e Crie o Cluster
 
 Execute o script de setup que instalará todas as ferramentas necessárias:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/cloud104/tcloud-devops-k8s-operators-training/main/scripts/setup.sh | bash
+curl -sSL https://raw.githubusercontent.com/cloud104/tcloud-devops-k8s-operators-training/main/scripts/setup-tools.sh | bash
+```
+
+Execute o script de setup do cluster Kind e registry
+
+```bash
+curl -sSL https://raw.githubusercontent.com/cloud104/tcloud-devops-k8s-operators-training/main/scripts/setup-cluster.sh | bash
 ```
 
 O script instalará:
