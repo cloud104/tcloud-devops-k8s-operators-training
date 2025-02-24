@@ -427,6 +427,7 @@ func (r *SampleAppReconciler) specService(app *appsv1alpha1.SampleApp, svc *core
             {
                 Port:       app.Spec.Port,
                 TargetPort: intstr.FromInt(int(app.Spec.Port)),
+                NodePort:   30000,
             },
         },
     }
