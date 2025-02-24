@@ -4,6 +4,27 @@
 
 Um Operator é um padrão de software que estende o Kubernetes para gerenciar aplicações e seus componentes. Ele encapsula o conhecimento operacional humano em código, automatizando tarefas complexas de gerenciamento de aplicações através de dois componentes fundamentais: Custom Resource Definitions (CRDs) e Controllers.
 
+
+```mermaid
+flowchart LR
+    subgraph OP ["Operator Pattern"]
+        CRD["Custom Resource
+        Definition"]
+        CR["Custom Resource"]
+        CTRL["Controller"]
+    end
+    
+    CRD -->|define| CR
+    CR -->|observado por| CTRL
+    CTRL -->|gerencia| K8S["Recursos Kubernetes"]
+    
+    classDef default fill:#f0f0f0,stroke:#333,stroke-width:2px
+    classDef resource fill:#ccffcc,stroke:#333
+    
+    class OP default
+    class CRD,CR,CTRL resource
+```
+
 Os CRDs permitem definir novos tipos de recursos personalizados no Kubernetes, enquanto os Custom Resources (CRs) são instâncias desses recursos que representam o estado desejado da aplicação. O Controller observa esses recursos e executa ações para garantir que o estado atual do cluster corresponda ao estado desejado descrito nos CRs.
 
 ```mermaid
@@ -313,6 +334,32 @@ spec:
 
 ### 3. Controller
 
+```mermaid
+flowchart TD
+    subgraph RT ["Controller Runtime"]
+        MGR["Manager"]
+        CACHE["Cache"]
+        CLIENT["Client"]
+        
+        subgraph CTRLS ["Controllers"]
+            C1["Controller 1"]
+            C2["Controller 2"]
+        end
+        
+        MGR -->|gerencia| CACHE
+        MGR -->|fornece| CLIENT
+        CACHE --> CTRLS
+        CLIENT --> CTRLS
+    end
+    
+    API["API Server"] --> CACHE
+    
+    classDef default fill:#f0f0f0,stroke:#333,stroke-width:2px
+    classDef components fill:#ccffcc,stroke:#333
+    
+    class RT default
+    class MGR,CACHE,CLIENT,C1,C2 components
+```
 O controller implementa a lógica do operator através do padrão reconciliation loop:
 
 1. **Watch**: Monitora mudanças nos recursos
@@ -321,6 +368,17 @@ O controller implementa a lógica do operator através do padrão reconciliation
 4. **Status**: Atualiza o status do recurso
 
 ## O Loop de Reconciliação
+
+```mermaid
+flowchart LR
+    WATCH["Watch"] -->|eventos| QUEUE["Queue"]
+    QUEUE -->|processa| RECONCILE["Reconcile"]
+    RECONCILE -->|atualiza| STATE["Estado"]
+    STATE -.->|monitora| WATCH
+    
+    classDef process fill:#ccffcc,stroke:#333
+    class WATCH,QUEUE,RECONCILE,STATE process
+```
 
 O loop de reconciliação é o coração de qualquer Operator Kubernetes. Este processo contínuo garante que o estado atual do cluster esteja alinhado com o estado desejado definido pelo usuário.
 
