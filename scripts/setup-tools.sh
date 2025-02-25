@@ -130,7 +130,7 @@ verificar_versoes() {
     echo -e "${VERDE}Go:${NC}          $(go version 2>/dev/null || echo 'não instalado')"
     echo -e "${VERDE}Docker:${NC}      $(docker --version 2>/dev/null || echo 'não instalado')"
     echo -e "${VERDE}Kind:${NC}        $(kind --version 2>/dev/null || echo 'não instalado')"
-    echo -e "${VERDE}Kubectl:${NC}     $(kubectl version --client 2>/dev/null | grep -o 'GitVersion:.*' || echo 'não instalado')"
+    echo -e "${VERDE}Kubectl:${NC}     $(kubectl version --client 2>/dev/null | grep -o 'Client Version:.*' || echo 'não instalado')"
     echo -e "${VERDE}Kubebuilder:${NC} $(kubebuilder version 2>/dev/null || echo 'não instalado')"
     echo -e "${VERDE}Kustomize:${NC}   $(kustomize version 2>/dev/null || echo 'não instalado')"
     echo -e "${VERDE}Tilt:${NC}        $(tilt version 2>/dev/null || echo 'não instalado')"
