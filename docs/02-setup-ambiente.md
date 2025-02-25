@@ -19,7 +19,7 @@ Primeiro, configure um KUBECONFIG específico para este ambiente de desenvolvime
 export KUBECONFIG=$HOME/.kube/k8s-operators-lab-config
 ```
 
-### 2. Instale as Ferramentas e Crie o Cluster
+### 2. Instale as Ferramentas
 
 Execute o script de setup que instalará todas as ferramentas necessárias:
 
