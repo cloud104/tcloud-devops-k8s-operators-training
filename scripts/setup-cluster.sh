@@ -115,4 +115,10 @@ data:
 EOF
 
 log "SUCESSO" "Ambiente Kind configurado com sucesso!"
-log "INFO" "Use 'docker push localhost:${REG_PORT}/sua-imagem' para publicar imagens"
+log "INFO" "Configurações do ambiente:"
+log "INFO" "- Registry local: localhost:${REG_PORT}"
+log "INFO" "- Para publicar imagens: docker push localhost:${REG_PORT}/sua-imagem"
+log "INFO" "- NodePort disponível na porta 30000 (host) -> 30000 (container)"
+log "INFO" "- Para acessar serviços NodePort: http://localhost:30000"
+log "INFO" "- Cluster name: ${CLUSTER_NAME}"
+log "INFO" "- Para verificar o status do cluster: kubectl cluster-info"
