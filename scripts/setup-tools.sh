@@ -126,13 +126,15 @@ instalar_tilt() {
 
 verificar_versoes() {
     log "INFO" "Verificando versões instaladas:"
-    go version
-    docker --version
-    kind --version
-    kubectl version --client
-    kubebuilder version
-    kustomize version
-    tilt version
+    echo -e "\n${AZUL}=== Versões das Ferramentas Instaladas ===${NC}"
+    echo -e "${VERDE}Go:${NC}          $(go version 2>/dev/null || echo 'não instalado')"
+    echo -e "${VERDE}Docker:${NC}      $(docker --version 2>/dev/null || echo 'não instalado')"
+    echo -e "${VERDE}Kind:${NC}        $(kind --version 2>/dev/null || echo 'não instalado')"
+    echo -e "${VERDE}Kubectl:${NC}     $(kubectl version --client 2>/dev/null | grep -o 'GitVersion:.*' || echo 'não instalado')"
+    echo -e "${VERDE}Kubebuilder:${NC} $(kubebuilder version 2>/dev/null || echo 'não instalado')"
+    echo -e "${VERDE}Kustomize:${NC}   $(kustomize version 2>/dev/null || echo 'não instalado')"
+    echo -e "${VERDE}Tilt:${NC}        $(tilt version 2>/dev/null || echo 'não instalado')"
+    echo
 }
 
 ###############################################################################
@@ -174,5 +176,14 @@ instalar_tilt
 
 verificar_versoes
 
-log "SUCESSO" "Ferramentas instaladas com sucesso!"
-log "AVISO" "Execute 'source $PROFILE_FILE' para aplicar as alterações"
+log "SUCESSO" "🎉 Instalação concluída com sucesso!"
+echo -e "\n${AZUL}=== Próximos Passos ===${NC}"
+echo -e "${VERDE}1.${NC} Execute o comando abaixo para aplicar as alterações no PATH:"
+echo -e "   ${AMARELO}source $PROFILE_FILE${NC}"
+echo -e "${VERDE}2.${NC} Verifique se você foi adicionado ao grupo 'docker':"
+echo -e "   ${AMARELO}groups | grep docker${NC}"
+echo -e "${VERDE}3.${NC} Caso não apareça o grupo 'docker', faça logout e login novamente"
+echo -e "${VERDE}4.${NC} Para verificar a instalação, execute:"
+echo -e "   ${AMARELO}./setup-cluster.sh${NC}"
+echo
+log "INFO" "Para mais informações, consulte a documentação do projeto"
