@@ -35,6 +35,13 @@ mkdir sampleapp-operator
 cd sampleapp-operator
 ```
 
+Inicialize o git
+
+```bash
+git init
+
+```
+
 Inicialize o projeto com Kubebuilder
 
 ```bash
