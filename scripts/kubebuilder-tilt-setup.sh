@@ -266,11 +266,11 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o ma
 
 # Stage 2: Imagem minimal com apenas o binário
 FROM gcr.io/distroless/static:nonroot
-WORKDIR /app
+WORKDIR /
 COPY --from=builder /workspace/manager .
 USER 65532:65532
 
-ENTRYPOINT ["/app/manager"]
+ENTRYPOINT ["/manager"]
 EOL
 
 # Geração do Dockerfile para desenvolvimento com debug
