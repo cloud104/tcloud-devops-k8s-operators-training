@@ -244,34 +244,34 @@ log "Registry configurado: ${REGISTRY}"
 log "Criando estrutura de diretórios para desenvolvimento..."
 mkdir -p tilt-dev
 
-# Geração do Dockerfile otimizado para produção
-# Multi-stage build com otimizações para tamanho e segurança
-log "Criando Dockerfile de produção na raiz..."
-cat > Dockerfile << 'EOL'
-# Stage 1: Build com cache de dependências e compilação otimizada
-FROM golang:1.23 AS builder
-ARG TARGETOS
-ARG TARGETARCH
+# # Geração do Dockerfile otimizado para produção
+# # Multi-stage build com otimizações para tamanho e segurança
+# log "Criando Dockerfile de produção na raiz..."
+# cat > Dockerfile << 'EOL'
+# # Stage 1: Build com cache de dependências e compilação otimizada
+# FROM golang:1.23 AS builder
+# ARG TARGETOS
+# ARG TARGETARCH
 
-WORKDIR /workspace
-COPY go.mod go.mod
-COPY go.sum go.sum
-RUN go mod download
+# WORKDIR /workspace
+# COPY go.mod go.mod
+# COPY go.sum go.sum
+# RUN go mod download
 
-COPY cmd/main.go cmd/main.go
-COPY api/ api/
-COPY internal/controller/ internal/controller/
+# COPY cmd/main.go cmd/main.go
+# COPY api/ api/
+# COPY internal/controller/ internal/controller/
 
-RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o manager cmd/main.go
+# RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o manager cmd/main.go
 
-# Stage 2: Imagem minimal com apenas o binário
-FROM gcr.io/distroless/static:nonroot
-WORKDIR /
-COPY --from=builder /workspace/manager .
-USER 65532:65532
+# # Stage 2: Imagem minimal com apenas o binário
+# FROM gcr.io/distroless/static:nonroot
+# WORKDIR /
+# COPY --from=builder /workspace/manager .
+# USER 65532:65532
 
-ENTRYPOINT ["/manager"]
-EOL
+# ENTRYPOINT ["/manager"]
+# EOL
 
 # Geração do Dockerfile para desenvolvimento com debug
 # Inclui Delve e configurações para debug remoto
