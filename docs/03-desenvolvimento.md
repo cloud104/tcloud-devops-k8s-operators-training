@@ -182,6 +182,11 @@ type SampleAppSpec struct {
  // +kubebuilder:validation:Maximum=65535
  // +kubebuilder:default=80
  Port int32 `json:"port,omitempty"`
+
+ // +kubebuilder:validation:Minimum=30000
+ // +kubebuilder:validation:Maximum=32767
+ // +kubebuilder:default=30000
+ NodePort int32 `json:"nodePort,omitempty"`
 }
 
 // SampleAppStatus define o estado observado
@@ -434,7 +439,7 @@ func (r *SampleAppReconciler) specService(app *appsv1alpha1.SampleApp, svc *core
             {
                 Port:       app.Spec.Port,
                 TargetPort: intstr.FromInt(int(app.Spec.Port)),
-                NodePort:   30000,
+                NodePort:   app.Spec.NodePort,
             },
         },
     }
