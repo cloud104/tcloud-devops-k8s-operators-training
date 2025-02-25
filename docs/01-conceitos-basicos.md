@@ -4,7 +4,6 @@
 
 Um Operator é um padrão de software que estende o Kubernetes para gerenciar aplicações e seus componentes. Ele encapsula o conhecimento operacional humano em código, automatizando tarefas complexas de gerenciamento de aplicações através de dois componentes fundamentais: Custom Resource Definitions (CRDs) e Controllers.
 
-
 ```mermaid
 flowchart LR
     subgraph OP ["Operator Pattern"]
@@ -360,6 +359,7 @@ flowchart TD
     class RT default
     class MGR,CACHE,CLIENT,C1,C2 components
 ```
+
 O controller implementa a lógica do operator através do padrão reconciliation loop:
 
 1. **Watch**: Monitora mudanças nos recursos
