@@ -42,6 +42,12 @@ git init
 
 ```
 
+Abrir seu editor de código (ex. vscode) e um terminal
+
+```bash
+code .
+```
+
 Inicialize o projeto com Kubebuilder
 
 ```bash
@@ -61,12 +67,6 @@ INFO Create Resource [y/n]
 y
 INFO Create Controller [y/n]
 y
-```
-
-Abrir seu editor de código (ex. vscode)
-
-```bash
-code .
 ```
 
 ### 1.3 Verificação e Instalação dos CRDs
