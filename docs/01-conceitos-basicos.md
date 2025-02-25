@@ -1,5 +1,60 @@
 # Conceitos Básicos de Operators Kubernetes
 
+### Arquitetura do Kubernetes
+
+```mermaid
+flowchart TD
+    USER("Usuário / Cliente") -->|"kubectl / API Calls"| API
+    
+    subgraph CP ["Control Plane"]
+        API("API Server") 
+        ETCD("etcd")
+        SCHED("Scheduler")
+        CM("Controller Manager")
+        
+        API -->|"Armazena estado"| ETCD
+        API <-->|"Agenda pods"| SCHED
+        API <-->|"Monitora recursos"| CM
+    end
+    
+    subgraph DP ["Data Plane"]
+        subgraph CN ["Componentes de Node"]
+            KUBELET("Kubelet")
+            PROXY("Kube Proxy")
+            CRI("Container Runtime")
+            
+            KUBELET -->|"Gerencia containers"| CRI
+        end
+        
+        N1("Node 1")
+        N2("Node 2")
+        N3("Node N")
+        
+        PROXY -->|"Configura rede"| N1
+        PROXY -->|"Configura rede"| N2
+        PROXY -->|"Configura rede"| N3
+    end
+    
+    API <-->|"API calls"| KUBELET
+    
+    %% Posicionamento dos subgráficos
+    CP ~~~ DP
+    
+    style USER fill:#f5f5f5,stroke:#333
+    style API fill:#ffffcc,stroke:#cccc00
+    style ETCD fill:#ccffcc,stroke:#00cc00
+    style SCHED fill:#ffcccc,stroke:#cc0000
+    style CM fill:#ccccff,stroke:#0000cc
+    style KUBELET fill:#ffccff,stroke:#cc00cc
+    style PROXY fill:#ccffff,stroke:#00cccc
+    style CRI fill:#ffeecc,stroke:#cc9900
+    style N1,N2,N3 fill:#eeeeee,stroke:#666666
+    style CP fill:#f9f9f9,stroke:#333,stroke-width:2px
+    style DP fill:#f0f0f0,stroke:#333,stroke-width:2px
+    style CN fill:#f5f5f5,stroke:#333,stroke-dasharray:5,5
+```
+
+
 ## O que é um Operator?
 
 Um Operator é um padrão de software que estende o Kubernetes para gerenciar aplicações e seus componentes. Ele encapsula o conhecimento operacional humano em código, automatizando tarefas complexas de gerenciamento de aplicações através de dois componentes fundamentais: Custom Resource Definitions (CRDs) e Controllers.
@@ -19,12 +74,89 @@ flowchart LR
     
     classDef default fill:#f0f0f0,stroke:#333,stroke-width:2px
     classDef resource fill:#ccffcc,stroke:#333
-    
+
     class OP default
     class CRD,CR,CTRL resource
 ```
 
 Os CRDs permitem definir novos tipos de recursos personalizados no Kubernetes, enquanto os Custom Resources (CRs) são instâncias desses recursos que representam o estado desejado da aplicação. O Controller observa esses recursos e executa ações para garantir que o estado atual do cluster corresponda ao estado desejado descrito nos CRs.
+
+**Exemplo de Custom Resource Definition (CRD)**
+
+```yaml
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: sampleapps.apps.cloud104.com
+spec:
+  group: apps.cloud104.com
+  names:
+    kind: SampleApp
+    plural: sampleapps
+    singular: sampleapp
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              image:
+                type: string
+              replicas:
+                type: integer
+                default: 1
+                minimum: 1
+                maximum: 10
+              port:
+                type: integer
+                default: 80
+                minimum: 1
+                maximum: 65535
+              nodePort:
+                type: integer
+                default: 30000
+                minimum: 30000
+                maximum: 32767
+            required:
+            - image
+          status:
+            type: object
+            properties:
+              availableReplicas:
+                type: integer
+    subresources:
+      status: {}
+    additionalPrinterColumns:
+    - name: Replicas
+      type: integer
+      jsonPath: .spec.replicas
+    - name: Available
+      type: integer
+      jsonPath: .status.availableReplicas
+    - name: Age
+      type: date
+      jsonPath: .metadata.creationTimestamp
+```  
+
+**Exemplo de Custom Resource (CR)**
+
+```yaml
+apiVersion: apps.cloud104.com/v1alpha1
+kind: SampleApp
+metadata:
+  name: sampleapp-example
+spec:
+  replicas: 1
+  image: nginx
+  port: 80
+  nodePort: 30000
+```  
 
 ```mermaid
 flowchart TD
@@ -82,59 +214,6 @@ flowchart TD
 
 Este padrão permite que desenvolvedores e operadores codifiquem seu conhecimento de domínio específico sobre como gerenciar uma aplicação, convertendo operações manuais em processos automatizados que seguem as melhores práticas do Kubernetes.
 
-### Arquitetura do Kubernetes
-
-```mermaid
-flowchart TD
-    USER("Usuário / Cliente") -->|"kubectl / API Calls"| API
-    
-    subgraph CP ["Control Plane"]
-        API("API Server") 
-        ETCD("etcd")
-        SCHED("Scheduler")
-        CM("Controller Manager")
-        
-        API -->|"Armazena estado"| ETCD
-        API <-->|"Agenda pods"| SCHED
-        API <-->|"Monitora recursos"| CM
-    end
-    
-    subgraph DP ["Data Plane"]
-        subgraph CN ["Componentes de Node"]
-            KUBELET("Kubelet")
-            PROXY("Kube Proxy")
-            CRI("Container Runtime")
-            
-            KUBELET -->|"Gerencia containers"| CRI
-        end
-        
-        N1("Node 1")
-        N2("Node 2")
-        N3("Node N")
-        
-        PROXY -->|"Configura rede"| N1
-        PROXY -->|"Configura rede"| N2
-        PROXY -->|"Configura rede"| N3
-    end
-    
-    API <-->|"API calls"| KUBELET
-    
-    %% Posicionamento dos subgráficos
-    CP ~~~ DP
-    
-    style USER fill:#f5f5f5,stroke:#333
-    style API fill:#ffffcc,stroke:#cccc00
-    style ETCD fill:#ccffcc,stroke:#00cc00
-    style SCHED fill:#ffcccc,stroke:#cc0000
-    style CM fill:#ccccff,stroke:#0000cc
-    style KUBELET fill:#ffccff,stroke:#cc00cc
-    style PROXY fill:#ccffff,stroke:#00cccc
-    style CRI fill:#ffeecc,stroke:#cc9900
-    style N1,N2,N3 fill:#eeeeee,stroke:#666666
-    style CP fill:#f9f9f9,stroke:#333,stroke-width:2px
-    style DP fill:#f0f0f0,stroke:#333,stroke-width:2px
-    style CN fill:#f5f5f5,stroke:#333,stroke-dasharray:5,5
-```
 
 ### Arquitetura de um Operator
 
