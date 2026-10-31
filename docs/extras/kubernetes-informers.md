@@ -5,7 +5,6 @@
 Informers são um padrão fundamental no Kubernetes que fornece um mecanismo eficiente para observar e reagir a mudanças nos recursos do cluster. Eles são especialmente importantes no desenvolvimento de Controllers e Operators.
 
 ## Arquitetura de Informers
-
 ```mermaid
 flowchart TD
     subgraph API ["API Server"]
@@ -35,10 +34,6 @@ flowchart TD
     LIST -->|"Lista inicial"| DELTA
     WATCH -->|"Stream de eventos"| DELTA
     CACHE -->|"Leitura rápida"| RECON
-    
-    style API fill:#ffffcc,stroke:#cccc00
-    style INFORMER fill:#f0f0f0,stroke:#333,stroke-width:2px
-    style CONSUMER fill:#ccffcc,stroke:#00cc00
 ```
 
 ## Componentes Principais
@@ -64,7 +59,6 @@ flowchart TD
 - Permitem lógica customizada por tipo de evento
 
 ## Fluxo de Informações
-
 ```mermaid
 sequenceDiagram
     participant API as API Server
@@ -105,7 +99,6 @@ sequenceDiagram
    - Reduz carga no API Server
 
 ## Exemplo de Implementação
-
 ```go
 // Criando um SharedInformerFactory
 informerFactory := informers.NewSharedInformerFactory(client, time.Hour*24)
@@ -122,9 +115,9 @@ podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
             queue.Add(key)
         }
     },
-    UpdateFunc: func(old, new interface{}) {
+    UpdateFunc: func(oldObj, newObj any) {
         // Lógica para atualização de objetos
-        key, err := cache.MetaNamespaceKeyFunc(new)
+        key, err := cache.MetaNamespaceKeyFunc(newObj)
         if err == nil {
             queue.Add(key)
         }
@@ -143,56 +136,49 @@ podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 
 ### SharedInformer Pattern
 
+O ponto do *shared* informer é o oposto de um informer por controller: **um** informer por tipo de recurso, e vários
+controllers consomem o mesmo cache e o mesmo watch.
+
 ```mermaid
 flowchart LR
-    subgraph SI ["SharedInformerFactory"]
-        IF1["Informer 1"]
-        IF2["Informer 2"]
-        IF3["Informer N"]
-        CACHE["Cache Compartilhado"]
-        
-        IF1 & IF2 & IF3 -->|"Usa"| CACHE
+    subgraph SI ["SharedInformer de Pods"]
+        IF["1 Informer"] --> CACHE["Cache compartilhado"]
     end
-    
-    subgraph CTRL ["Controllers"]
-        C1["Controller 1"]
-        C2["Controller 2"]
-        C3["Controller N"]
-    end
-    
-    IF1 -->|"Notifica"| C1
-    IF2 -->|"Notifica"| C2
-    IF3 -->|"Notifica"| C3
-    
-    style SI fill:#f0f0f0,stroke:#333,stroke-width:2px
-    style CTRL fill:#ccffcc,stroke:#00cc00
+    IF -->|"notifica todos"| C1["Controller 1"]
+    IF -->|"notifica todos"| C2["Controller 2"]
+    IF -->|"notifica todos"| C3["Controller N"]
 ```
 
-Este padrão permite que múltiplos controllers compartilhem o mesmo cache e infraestrutura de watch, reduzindo significativamente o consumo de recursos e a carga no API Server.
+Um único watch do tipo Pod alimenta todos os controllers que se interessam por Pods, reduzindo o consumo de recursos e
+a carga no API Server.
 
-## Boas Práticas
+## Informers no controller-runtime
 
-1. **Use SharedInformers**
-   - Compartilhe informers entre controllers quando possível
-   - Evite criar múltiplos watches para o mesmo tipo de recurso
+No lab e no operator do treinamento você **não** instancia `SharedInformerFactory` à mão: o `Manager` do
+controller-runtime já mantém um cache alimentado por informers compartilhados. Você só declara o que observar no
+`SetupWithManager`, e o framework cria os watches e enfileira os `reconcile.Request`:
 
-2. **Configure Resync Period**
-   - Defina um período de resync apropriado
-   - Considere a natureza dos seus recursos
+```mermaid
+flowchart LR
+    MGR["Manager"] --> CACHE["Cache<br/>(informers compartilhados)"]
+    CACHE -->|"For / Owns / Watches"| Q["Queue"]
+    Q --> REC["seu Reconcile"]
+    REC -->|"Get lê do cache, não do API Server"| CACHE
+```
 
-3. **Implemente Rate Limiting**
-   - Use workqueues com rate limiting
-   - Evite sobrecarregar o cluster
+- `For(&MyApp{})` observa o recurso principal.
+- `Owns(&appsv1.Deployment{})` observa os filhos (owner reference) — é o drift do lab.
+- `Watches(...)` observa um tipo não-filho, mapeando o evento para o dono.
 
-4. **Valide Cache**
-   - Verifique se o cache está sincronizado antes de processar
-   - Implemente timeouts adequados
+A API de client-go mostrada acima é o que roda **por baixo**; conhecê-la ajuda a depurar, mas o código que você
+escreve no dia a dia é o `SetupWithManager`.
 
-## Considerações de Desempenho
+## Boas práticas
 
-- O cache local reduz latência de leitura
-- Eventos são processados de forma ordenada
-- Rate limiting previne sobrecarga
-- Resync period ajuda a manter consistência
+- **Leia sempre do cache** (o `Get`/`List` do client do manager), nunca direto do API Server: é o ganho do informer.
+- **O cache pode estar atrasado** em relação ao cluster; o loop level-triggered absorve isso, mas não assuma que uma
+  escrita sua aparece na leitura seguinte.
+- **Espere o cache sincronizar** antes de reconciliar — o manager já faz isso no boot (`WaitForCacheSync`).
+- **Resync** não é polling do API Server: reentrega os objetos do cache, útil como rede de segurança.
 
-Os Informers são uma parte crucial da arquitetura de controllers no Kubernetes, fornecendo um mecanismo eficiente e confiável para observar e reagir a mudanças no cluster.
+Voltar ao lab: [`03-desenvolvimento.md`](../03-desenvolvimento.md).
