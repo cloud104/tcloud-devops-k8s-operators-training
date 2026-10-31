@@ -4,57 +4,63 @@
 
 ### Level Triggers vs Edge Triggers
 
+Os dois termos descrevem **o que a lógica olha**, não com que frequência ela roda. Eventos disparam o reconcile nos
+dois casos.
+
 ```mermaid
 flowchart TD
     subgraph LT ["Level Triggered"]
-        L1[Controller] -->|"Reconcilia"| L2[Estado Atual]
-        L2 -->|"Compara"| L3[Estado Desejado]
-        L3 -->|"RequeueAfter"| L1
+        L1[Evento ou requeue] -->|"só o nome do objeto"| L2[Reconcile]
+        L2 -->|"lê"| L3[Estado atual e desejado]
+        L3 -->|"corrige a diferença"| L2
     end
-    
+
     subgraph ET ["Edge Triggered"]
-        E1[Watch] -->|"Evento"| E2[Controller]
-        E2 -->|"Reconcilia"| E3[Estado]
-        E3 -.->|"Aguarda próximo evento"| E1
+        E1[Evento] -->|"o que mudou"| E2[Handler]
+        E2 -->|"reage àquela mudança"| E3[Ação]
+        E3 -.->|"evento perdido = estado errado"| E1
     end
-    
+
     style LT fill:#f0f0f0,stroke:#333,stroke-width:2px
     style ET fill:#e6f3ff,stroke:#333,stroke-width:2px
 ```
 
-#### Level Triggered (Gatilho por Nível)
+#### Level Triggered (o modelo do controller-runtime)
 
-- **Funcionamento**: Reconciliação constante e periódica
+- **Funcionamento**: o `Reconcile` recebe só namespace e nome, lê o estado e corrige a diferença
 - **Vantagens**:
-  - Maior resiliência
-  - Recuperação automática
-  - Alta disponibilidade
+  - Evento perdido ou repetido não importa: a próxima passada corrige
+  - Eventos em rajada viram uma passada só, porque a fila deduplica por nome
+  - Reiniciar o operator é seguro: ao subir, ele reconcilia tudo
+
+`Owns()` e `Watches()` decidem **quando** acordar; o que o `Reconcile` faz não depende de qual evento foi.
 
 ```go
-// Implementação Level Triggered
-return ctrl.Result{RequeueAfter: time.Minute * 5}, nil
-```
-
-#### Edge Triggered (Gatilho por Evento)
-
-- **Funcionamento**: Reconciliação baseada em eventos
-- **Vantagens**:
-  - Eficiência computacional
-  - Menor latência
-  - Menor carga no API Server
-
-```go
-// Implementação Edge Triggered
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
     return ctrl.NewControllerManagedBy(mgr).
         For(&myappv1.MyApp{}).
+        Owns(&appsv1.Deployment{}).
         Watches(
-            &source.Kind{Type: &corev1.Secret{}},
+            &corev1.Secret{},
             handler.EnqueueRequestsFromMapFunc(r.findAppsForSecret),
         ).
         Complete(r)
 }
 ```
+
+`RequeueAfter` é para o que **não gera evento**, como um estado externo que precisa ser consultado. Não é o que torna
+o controller level-triggered.
+
+```go
+return ctrl.Result{RequeueAfter: time.Minute * 5}, nil
+```
+
+#### Edge Triggered
+
+- **Funcionamento**: a ação depende do evento em si ("criaram X, então faço Y")
+- **Problema**: evento perdido, por queda do operator, por exemplo, nunca é compensado
+
+Evite em operators. Se o código precisa saber "o que mudou", normalmente falta gravar algo no status.
 
 ## 2. Gerenciamento de Recursos
 
@@ -165,6 +171,28 @@ status:
       reason: Creating
       message: "Criando recursos"
 ```
+
+### Rollout ordenado
+
+`CreateOrUpdate` de vários Deployments de uma vez sobe tudo junto. Quando a aplicação tem ordem (um componente migra
+o banco e os outros só podem subir depois), a chain precisa de um **gate**: o ensurer só avança quando o anterior
+terminou, e devolve requeue enquanto espera.
+
+```go
+if migrator.Status.AvailableReplicas < *migrator.Spec.Replicas {
+    state.Waiting = "migrator"
+    return nil // os nós seguintes leem state.Waiting e não sobem os workers
+}
+```
+
+Pontos que mordem:
+
+- `Available` não quer dizer "terminou": confira que o `observedGeneration` do Deployment alcançou o `generation`,
+  senão você lê o status do rollout anterior.
+- Health check verde pode vir antes do trabalho real. Se o componente responde 200 antes de migrar, o gate precisa de
+  um sinal próprio.
+- Ordem de descida costuma ser a inversa da de subida, e precisa ser modelada também: esvaziar os workers antes de
+  reiniciar quem migra.
 
 ## 4. Padrões de Backup e Recuperação
 

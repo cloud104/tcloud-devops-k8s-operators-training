@@ -1,56 +1,52 @@
 # Treinamento de Operators Kubernetes
 
-Este repositório contém material para treinamento básico de desenvolvimento de Operators Kubernetes usando Kubebuilder.
+Material de um treinamento de 3 horas sobre desenvolvimento de Operators Kubernetes com Kubebuilder. O lab é um
+operator pequeno, o `SampleApp`, escrito do zero. Quem assiste não precisa preparar máquina: a parte prática é
+conduzida ao vivo.
 
-## Início Rápido
+## Por onde começar
 
-1. Configure o ambiente:
+| Documento | Conteúdo |
+|---|---|
+| [`docs/00-roteiro.md`](docs/00-roteiro.md) | Roteiro da sessão, com tempos medidos |
+| [`docs/01-conceitos-basicos.md`](docs/01-conceitos-basicos.md) | CRD, controller, reconcile, level-triggered |
+| [`docs/02-setup-ambiente.md`](docs/02-setup-ambiente.md) | Ferramentas, versões pinadas e cluster |
+| [`docs/03-desenvolvimento.md`](docs/03-desenvolvimento.md) | Passo a passo do lab |
+| [`docs/extras/README.md`](docs/extras/README.md) | Índice das leituras: finalizer, rollout ordenado, predicates, informers |
 
-```bash
-# Configure KUBECONFIG dedicado
-export KUBECONFIG=$HOME/.kube/k8s-operators-lab-config
-
-# Instale as ferramentas necessárias
-curl -sSL https://raw.githubusercontent.com/cloud104/tcloud-devops-k8s-operators-training/main/scripts/setup-tools.sh | bash
-
-# Aplique as alterações
-source ~/.bashrc
-
-# Configure o cluster Kind e registry
-curl -sSL https://raw.githubusercontent.com/cloud104/tcloud-devops-k8s-operators-training/main/scripts/setup-cluster.sh | bash
-```
-
-2. Crie um novo operator:
+## Início rápido
 
 ```bash
-mkdir sampleapp-operator
-cd sampleapp-operator
-
-# Inicialize com Kubebuilder
-kubebuilder init --domain cloud104.com --repo github.com/cloud104/sampleapp-operator
-kubebuilder create api --group apps --version v1alpha1 --kind SampleApp
-
-# Configure ambiente de desenvolvimento
-curl -sSL https://raw.githubusercontent.com/cloud104/tcloud-devops-k8s-operators-training/main/scripts/kubebuilder-tilt-setup.sh | bash
+git clone git@github.com:cloud104/tcloud-devops-k8s-operators-training.git
+cd tcloud-devops-k8s-operators-training
+scripts/setup-tools.sh
 ```
 
-## Estrutura do Treinamento
+Depois siga [`docs/03-desenvolvimento.md`](docs/03-desenvolvimento.md) a partir da raiz do clone.
 
-- `docs/`: Documentação e guias
-  - `01-conceitos-basicos.md`: Fundamentos de Operators
-  - `02-setup-ambiente.md`: Configuração do ambiente
-  - `03-desenvolvimento.md`: Desenvolvimento do operator
+## Versões
 
-- `operator/sampleapp/`: Código fonte do operator exemplo
-- `scripts/`: Scripts de configuração do ambiente
+Pinadas em `scripts/setup-tools.sh` e `scripts/setup-cluster.sh`:
+
+| Ferramenta | Versão |
+|---|---|
+| Go | 1.26.8 |
+| Kubebuilder | 4.16.0 |
+| controller-runtime | 0.25 (vem do scaffold) |
+| Kubernetes (node do kind, kubectl) | 1.37.0 |
+| kind | 0.33.0 |
+| Kustomize | 5.8.1 |
+| Tilt | 0.37.8 |
+
+## Estrutura
+
+- `docs/`: roteiro, conceitos, setup, passo a passo e leituras extras
+- `scripts/setup-tools.sh`: instala as ferramentas
+- `scripts/setup-cluster.sh`: cria o cluster kind do lab
+- `scripts/kubebuilder-tilt-setup.sh`: configura o Tilt num projeto Kubebuilder
 
 ## Pré-requisitos
 
 - Linux Ubuntu/Debian
 - Acesso sudo
-- Conhecimento básico de Kubernetes
-- Familiaridade com Go
-
-## Suporte
-
-Em caso de dúvidas ou problemas, abra uma issue no repositório.
+- Go e Kubernetes básicos (Deployment, Service)

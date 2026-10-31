@@ -121,10 +121,11 @@ kubebuilder create api --group apps --version v1alpha1 --kind MyApp
 .
 ├── api/                    # Definições de API (CRDs)
 ├── config/                 # Configurações e manifests
-├── controllers/           # Implementação dos controllers
-├── webhooks/             # Webhooks (opcional)
-├── main.go               # Ponto de entrada
-└── Makefile             # Automação de build/deploy
+├── cmd/main.go             # Ponto de entrada (manager)
+├── internal/controller/    # Implementação dos controllers e suite do envtest
+├── internal/webhook/       # Webhooks (opcional)
+├── test/e2e/               # Testes e2e em kind
+└── Makefile                # Automação de build/deploy
 ```
 
 ## Implementação do Controller
@@ -147,7 +148,7 @@ type MyAppStatus struct {
 ### 2. Reconciler
 
 ```go
-// controllers/myapp_controller.go
+// internal/controller/myapp_controller.go
 func (r *MyAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
     log := r.Log.WithValues("myapp", req.NamespacedName)
     
@@ -173,13 +174,16 @@ func (r *MyAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
         For(&myappv1alpha1.MyApp{}).                // Principal recurso
         Owns(&appsv1.Deployment{}).                 // Recursos owned
         Watches(                                    // Recursos adicionais
-            &source.Kind{Type: &corev1.Secret{}},
+            &corev1.Secret{},
             handler.EnqueueRequestsFromMapFunc(r.findObjectsForSecret),
         ).
-        WithEventFilter(predicate.GenerationChangedPredicate{}). // Filtros
         Complete(r)
 }
 ```
+
+Filtros (predicates) entram por recurso, com `builder.WithPredicates`. `WithEventFilter` vale para todos os watches:
+com `GenerationChangedPredicate` ele também descartaria as mudanças de status dos Deployments, e o controller nunca
+veria as réplicas ficarem disponíveis.
 
 ## Webhooks
 
@@ -223,7 +227,7 @@ func (r *MyApp) Default() {
 O Kubebuilder fornece um framework de testes integrado:
 
 ```go
-// controllers/myapp_controller_test.go
+// internal/controller/myapp_controller_test.go
 func TestMyAppController(t *testing.T) {
     g := gomega.NewGomegaWithT(t)
 
@@ -239,7 +243,7 @@ func TestMyAppController(t *testing.T) {
             Namespace: "default",
         },
         Spec: myappv1alpha1.MyAppSpec{
-            Replicas: pointer.Int32Ptr(3),
+            Replicas: ptr.To(int32(3)),
         },
     }
 
@@ -254,8 +258,8 @@ func TestMyAppController(t *testing.T) {
 ## Boas Práticas
 
 1. **Gerenciamento de Erros**
-   - Use `Result{Requeue: true}` para retry
-   - Implemente backoff adequado
+   - Devolva o erro: a fila refaz com backoff
+   - Use `Result{RequeueAfter: d}` para esperar algo que não gera evento
    - Log estruturado para debugging
 
 2. **Cache e Performance**
