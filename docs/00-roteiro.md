@@ -19,7 +19,7 @@ próprio, no repositório privado do operator, porque depende do produto.
 | 1:25 | [Lab 2](#bloco-4-lab-2) | 45 min | 20 s | não; só 2.6 encurta |
 | 2:10 | [Lab 3](#bloco-5-lab-3) | 15 min | 1 min 45 s | não |
 | 2:25 | [Do lab ao PDV](#bloco-6-do-lab-ao-pdv) | 10 min | - | sim, até 5 min |
-| 2:35 | [Demo](#bloco-7-demo) | 20 min | 3 min até `Ready` | não |
+| 2:35 | [Demo](#bloco-7-demo) | 20 min | 6 min até `Ready` | não |
 | 2:55 | [Perguntas](#bloco-8-perguntas-e-próximos-passos) | 5 min | - | sim |
 | 3:00 | Fim | | | |
 
@@ -53,8 +53,8 @@ cache e share próprios, banco fora do cluster.
 **Dizer:** "Um Deployment mantém réplicas. Ele não sabe que um componente tem de subir antes do outro, nem que reiniciá-lo
 com os workers no ar quebra tudo. Esse conhecimento morava num runbook; o operator é esse runbook virando código."
 
-**Combinar:** o que existe hoje. O produto real subiu no kind. Ainda não roda no TKS, e não há provisionamento pelo
-Portal.
+**Combinar:** o que existe hoje. O produto completo subiu no dev do TKS, com banco de teste. Não há provisionamento pelo
+Portal, e ele ainda não roda em hmg nem em produção.
 
 **Saída esperada:** ninguém ainda vê terminal. O time sabe dizer por que um Deployment não basta.
 
@@ -172,15 +172,16 @@ Depois: Ctrl+C e a [limpeza](03-desenvolvimento.md#limpeza).
 
 **2:35, 20 min.**
 
-**Objetivo:** ver o operator real provisionando o produto real, a partir de um manifesto.
+**Objetivo:** ver o operator real provisionando o produto real no cluster de dev, a partir de um manifesto, e abrir o
+frontend pelo domínio público.
 
-**Mostrar e comandos:** a sequência ao vivo do runbook privado, com o log do manager à vista: aplicar, `Provisioning` até
-`Ready`, ordem de subida, recursos criados, conditions, um filho apagado voltando, e a remoção.
+**Mostrar e comandos:** a sequência ao vivo do runbook privado: ligar a topologia, `Provisioning` até `Ready`, ordem de
+subida, conditions, recursos criados, link do frontend para a turma e um filho apagado voltando.
 
-**Dizer:** "O que fiz foi um `kubectl apply`. Quem sabe a ordem é o operator."
+**Dizer:** "O que fiz foi mudar um campo no manifesto. Quem sabe a ordem é o operator."
 
-**Saída esperada:** `Ready` em cerca de 3 minutos, e um Service apagado de volta em menos de 1 s. Se travar por mais de 5
-minutos, vá para o plano B do runbook.
+**Saída esperada:** `Ready` em cerca de 6 minutos, e a tela de login no link. Se o Orchestrator não estabilizar em 10
+minutos, vá para a contingência do runbook.
 
 ## Bloco 8: Perguntas e próximos passos
 
