@@ -27,8 +27,8 @@ próprio, no repositório privado do operator, porque depende do produto.
 explicação e leitura de código, **estimado, não medido**: nenhum ensaio foi feito com fala. Se atrasar, a ordem de corte
 é: bloco 1, bloco 2, bloco 6 e o item 2.6 do lab. Dá até 25 minutos. Teoria sai primeiro; lab e demo, nunca.
 
-Com cache do Go frio, os mesmos comandos levam bem mais: 1 min 25 s no Lab 1, 2 min no Lab 2 e 6 min no Lab 3. Por isso
-o preparo é obrigatório.
+Com cache do Go frio, os comandos levam bem mais: 1 min 25 s no Lab 1, 2 min no Lab 2 e 46 s só no `make test`. O Tilt
+com cache frio não foi medido. Por isso o preparo é obrigatório.
 
 ## Preparo
 
