@@ -3,7 +3,6 @@
 ## O que é o Kubebuilder?
 
 Kubebuilder é um framework para construir Kubernetes APIs e controllers usando CRDs (Custom Resource Definitions). Ele proporciona uma estrutura padronizada e ferramentas para desenvolver Operators de forma eficiente.
-
 ```mermaid
 flowchart TD
     subgraph KB ["Kubebuilder"]
@@ -23,17 +22,11 @@ flowchart TD
     end
     
     KB -->|produz| OUT
-    
-    style KB fill:#f0f0f0,stroke:#333,stroke-width:2px
-    style OUT fill:#e6f3ff,stroke:#333,stroke-width:2px
-    style CLI,SCAF,TEST fill:#ffcccc,stroke:#333
-    style CRD,CTRL,RBAC,WEBB fill:#ccffcc,stroke:#333
 ```
 
 ## Arquitetura do Manager
 
 O Manager é o componente central em um projeto Kubebuilder. Ele gerencia controllers, webhooks e recursos compartilhados.
-
 ```mermaid
 flowchart TD
     subgraph MGR ["Manager"]
@@ -61,19 +54,11 @@ flowchart TD
     end
     
     API["API Server"] -->|Watch/List| CACHE
-    
-    style MGR fill:#f0f0f0,stroke:#333,stroke-width:2px
-    style CTRL,WH fill:#e6f3ff,stroke:#333,stroke-width:2px
-    style CACHE,CLIENT,SCHEME fill:#ffcccc,stroke:#333
-    style METRICS,HEALTH fill:#ccffcc,stroke:#333
-    style C1,C2,CN fill:#cce5ff,stroke:#333
-    style V,M,C fill:#ffe5cc,stroke:#333
 ```
 
 ## Fluxo de um Controller
 
 Diagrama mostrando como um controller processa recursos:
-
 ```mermaid
 flowchart TD
     subgraph CTRL ["Controller"]
@@ -96,17 +81,11 @@ flowchart TD
     
     API["API Server"] -->|Watch/List| WATCH
     REC -->|CRUD| API
-    
-    style CTRL fill:#f0f0f0,stroke:#333,stroke-width:2px
-    style INF fill:#e6f3ff,stroke:#333,stroke-width:2px
-    style PRED,QUEUE,REC fill:#ffcccc,stroke:#333
-    style WATCH,CACHE,HAND fill:#ccffcc,stroke:#333
 ```
 
 ## Setup Básico
 
 ### 1. Inicialização do Projeto
-
 ```bash
 # Inicializar novo projeto
 kubebuilder init --domain my.domain.com --repo my.domain.com/myproject
@@ -116,7 +95,6 @@ kubebuilder create api --group apps --version v1alpha1 --kind MyApp
 ```
 
 ### 2. Estrutura do Projeto
-
 ```bash
 .
 ├── api/                    # Definições de API (CRDs)
@@ -131,7 +109,6 @@ kubebuilder create api --group apps --version v1alpha1 --kind MyApp
 ## Implementação do Controller
 
 ### 1. Definição da API (CRD)
-
 ```go
 // api/v1alpha1/myapp_types.go
 type MyAppSpec struct {
@@ -146,11 +123,11 @@ type MyAppStatus struct {
 ```
 
 ### 2. Reconciler
-
 ```go
 // internal/controller/myapp_controller.go
 func (r *MyAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-    log := r.Log.WithValues("myapp", req.NamespacedName)
+    // O scaffold v4 não tem mais o campo r.Log: o logger vem do contexto.
+    log := logf.FromContext(ctx) // import "sigs.k8s.io/controller-runtime/pkg/log"
     
     // Carregar o CR
     var myApp myappv1alpha1.MyApp
@@ -166,7 +143,6 @@ func (r *MyAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 ## Uso de Informers
 
 O Kubebuilder utiliza SharedInformers através do Manager para eficiência:
-
 ```go
 // Setup do Controller com Informers
 func (r *MyAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -188,7 +164,6 @@ veria as réplicas ficarem disponíveis.
 ## Webhooks
 
 ### Tipos de Webhooks
-
 ```mermaid
 flowchart LR
     subgraph WH ["Webhooks"]
@@ -202,58 +177,62 @@ flowchart LR
     
     API["API Server"] -->|Request| WH
     WH -->|Response| API
-    
-    style WH fill:#f0f0f0,stroke:#333,stroke-width:2px
-    style V,M,C fill:#ffcccc,stroke:#333
 ```
 
 ### Implementação
 
+No Kubebuilder v4 os webhooks não são métodos no tipo da API: o scaffold gera um `CustomValidator` e um
+`CustomDefaulter` em `internal/webhook/<versão>/`, e o objeto chega como parâmetro. As assinaturas mudaram (recebem
+`ctx` e `obj`; a validação devolve `admission.Warnings`):
+
 ```go
-// Webhook de Validação
-func (r *MyApp) ValidateCreate() error {
-    // Lógica de validação
+// internal/webhook/v1alpha1/myapp_webhook.go
+type MyAppCustomValidator struct{}
+
+func (v *MyAppCustomValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+    app := obj.(*myappv1alpha1.MyApp)
+    _ = app
+    return nil, nil
+}
+// ValidateUpdate(ctx, oldObj, newObj) e ValidateDelete(ctx, obj) seguem o mesmo formato.
+
+type MyAppCustomDefaulter struct{}
+
+func (d *MyAppCustomDefaulter) Default(ctx context.Context, obj runtime.Object) error {
     return nil
 }
-
-// Webhook de Mutação
-func (r *MyApp) Default() {
-    // Lógica de valores default
-}
 ```
+
+Para regras simples de validação, prefira marcadores (`+kubebuilder:validation:...`) e **CEL** (`+kubebuilder:validation:XValidation`),
+que rodam no API Server sem webhook. Webhook só quando a regra precisa consultar algo fora do objeto.
 
 ## Testes
 
-O Kubebuilder fornece um framework de testes integrado:
+O scaffold v4 gera testes com **Ginkgo v2 + Gomega** sobre **envtest**: um `etcd` e um `kube-apiserver` de verdade,
+sem kubelet. O `suite_test.go` sobe o `testEnv` e expõe um `k8sClient`; cada `<kind>_controller_test.go` descreve o
+comportamento com `Describe`/`It`. Como não há kubelet, o Pod nunca fica `Running` sozinho — o teste escreve o
+`status` do Deployment à mão quando precisa simular réplicas disponíveis.
 
 ```go
 // internal/controller/myapp_controller_test.go
-func TestMyAppController(t *testing.T) {
-    g := gomega.NewGomegaWithT(t)
+var _ = Describe("MyApp controller", func() {
+    It("cria o Deployment e publica o status", func(ctx SpecContext) {
+        app := &myappv1alpha1.MyApp{
+            ObjectMeta: metav1.ObjectMeta{Name: "test-app", Namespace: "default"},
+            Spec:       myappv1alpha1.MyAppSpec{Replicas: ptr.To(int32(3))},
+        }
+        Expect(k8sClient.Create(ctx, app)).To(Succeed())
 
-    // Setup do ambiente de teste
-    ctx := context.Background()
-    mgr, err := ctrl.NewManager(cfg, ctrl.Options{Scheme: scheme.Scheme})
-    g.Expect(err).NotTo(gomega.HaveOccurred())
-
-    // Testes
-    myApp := &myappv1alpha1.MyApp{
-        ObjectMeta: metav1.ObjectMeta{
-            Name:      "test-app",
-            Namespace: "default",
-        },
-        Spec: myappv1alpha1.MyAppSpec{
-            Replicas: ptr.To(int32(3)),
-        },
-    }
-
-    // Criar recurso
-    g.Expect(k8sClient.Create(ctx, myApp)).To(gomega.Succeed())
-
-    // Verificar reconciliação
-    // ...
-}
+        dep := &appsv1.Deployment{}
+        Eventually(func() error {
+            return k8sClient.Get(ctx, types.NamespacedName{Name: "test-app", Namespace: "default"}, dep)
+        }).Should(Succeed())
+    })
+})
 ```
+
+`Eventually` é essencial: o reconcile é assíncrono, então o teste espera o estado convergir, nunca checa na hora.
+A CEL (`XValidation`) roda de verdade no envtest, porque o API Server é real.
 
 ## Boas Práticas
 
@@ -277,12 +256,8 @@ func TestMyAppController(t *testing.T) {
    - Use `+kubebuilder:rbac` markers
    - Valide permissões em testes
 
-## Conclusão
+## Próximos passos
 
-O Kubebuilder proporciona uma estrutura robusta para desenvolver Operators Kubernetes, com:
-
-- Geração automática de código e manifests
-- Padrões estabelecidos de implementação
-- Ferramentas de teste integradas
-- Suporte a webhooks e validação
-- Gerenciamento eficiente de recursos através de informers compartilhados
+- Webhooks, conversão de versões, leader election e rate limiting: [Tópicos avançados](advanced-operator-topics.md).
+- O lab aplica tudo isto num operator pequeno: [`03-desenvolvimento.md`](../03-desenvolvimento.md).
+- Referência oficial: [Kubebuilder Book](https://book.kubebuilder.io/).

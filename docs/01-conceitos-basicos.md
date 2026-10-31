@@ -18,6 +18,7 @@ flowchart LR
     API -->|eventos| CTRL["Controller"]
     CTRL -->|cria e corrige| RES["Deployment, Service, ..."]
     CTRL -->|publica| STATUS["status do CR"]
+    RES -.->|algo saiu do lugar| API
 ```
 
 ## CRD e CR
@@ -49,11 +50,10 @@ A CRD não se escreve à mão: ela é gerada dos tipos Go e dos marcadores `+kub
 ```mermaid
 flowchart LR
     WATCH["Watch"] -->|eventos| QUEUE["Queue<br/>deduplica por nome"]
-    QUEUE -->|namespace/nome| RECONCILE["Reconcile"]
-    RECONCILE -->|lê| STATE["Estado atual"]
-    RECONCILE -->|corrige| API["API Server"]
+    QUEUE -->|namespace/nome| RECONCILE["Reconcile<br/>compara desejado × atual"]
+    RECONCILE -->|corrige a diferença| API["API Server"]
     API -->|novos eventos| WATCH
-    RECONCILE -->|erro: retry com backoff| QUEUE
+    RECONCILE -->|erro: volta à fila com backoff| QUEUE
 ```
 
 - O **manager** (controller-runtime) mantém um cache local do cluster, alimentado por watches. O `Get` do controller lê
@@ -82,6 +82,14 @@ Uma owner reference no filho aponta para o dono, e faz duas coisas:
 - **Drift:** `Owns(&appsv1.Deployment{})` faz o controller observar os Deployments que têm dono do seu tipo. Mudou ou
   sumiu um filho, o dono entra na fila, e o `Reconcile` restaura o desejado.
 
+```mermaid
+flowchart LR
+    CR["SampleApp<br/>(dono)"] -->|ownerRef| DEP["Deployment"]
+    CR -->|ownerRef| SVC["Service"]
+    DEP -.->|"filho muda ou some:<br/>Owns() enfileira o dono"| REC["Reconcile<br/>restaura o filho"]
+    CR ==>|"CR apagado"| GC(["GC apaga os filhos<br/>em cascata"])
+```
+
 ## Conditions
 
 `status.conditions` é a lista padrão do Kubernetes para dizer em que pé as coisas estão. Cada entrada tem `type`,
@@ -95,9 +103,10 @@ ordenada de ensurers, cada um dono de um recurso, dividindo um `State` criado a 
 
 ```mermaid
 flowchart LR
-    R["Reconcile"] --> D["DeploymentEnsurer<br/>publica State.Deployment"]
-    D --> S["ServiceEnsurer"]
-    S --> ST["StatusEnsurer<br/>lê o State, escreve o status"]
+    R["Reconcile"] --> D["DeploymentEnsurer"]
+    D -->|State.Deployment| S["ServiceEnsurer"]
+    D -.->|erro interrompe a chain| ST
+    S --> ST["StatusEnsurer<br/>sempre roda: lê o State,<br/>escreve o status"]
 ```
 
 - A ordem é explícita, e por isso testável.
