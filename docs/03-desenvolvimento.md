@@ -706,5 +706,4 @@ rm -f "$KUBECONFIG"
 | `curl` em `localhost:30000` sem resposta | pod ainda subindo | `kubectl get pods`, depois `kubectl logs` |
 | Tilt recusa o contexto | `KUBECONFIG` não exportado neste terminal | exporte e confira `kubectl config current-context` |
 
-Para ir além: [padrões avançados](extras/advanced-operator-patterns.md) (finalizer, rollout ordenado),
-[predicates](extras/predicates-kubebuilder.md), [CreateOrUpdate](extras/kubernetes-create-or-update.md).
+Para ir além: [leituras extras](extras/README.md).
