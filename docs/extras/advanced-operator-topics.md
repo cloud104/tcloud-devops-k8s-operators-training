@@ -15,11 +15,6 @@ flowchart LR
     MUT -->|Mutation| VAL
     VAL -->|Validation| API
     
-    classDef default fill:#f0f0f0,stroke:#333,stroke-width:2px
-    classDef webhook fill:#ccffcc,stroke:#333
-    
-    class AC default
-    class VAL,MUT webhook
 ```
 
 ### Implementação
@@ -52,34 +47,47 @@ flowchart TD
         V1B["v1beta1"]
         V1["v1"]
         
-        V1A -->|"Conversão"| V1B
-        V1B -->|"Conversão"| V1
+        V1A -->|"ConvertTo/From"| V1
+        V1B -->|"ConvertTo/From"| V1
     end
     
     subgraph COMP ["Compatibilidade"]
-        STORE["Storage Version"]
+        STORE["Hub (em geral a storage version)"]
         SERVED["Served Versions"]
     end
     
     V1A & V1B & V1 --> SERVED
     V1 --> STORE
-    
-    style VER fill:#f0f0f0,stroke:#333,stroke-width:2px
-    style COMP fill:#e6f3ff,stroke:#333,stroke-width:2px
 ```
 
-### Exemplo de Webhook de Conversão
+O controller-runtime usa um modelo **Hub-and-Spoke**, não uma cadeia. A *storage version* é o **Hub**; cada outra
+versão é um **Spoke** que converte direto de/para o Hub. Não existe `v1alpha1 → v1beta1 → v1`: todo spoke fala com o
+hub. O handler de conversão genérico chama os métodos abaixo (pacote `sigs.k8s.io/controller-runtime/pkg/conversion`):
+
+Cada método é declarado **no pacote do próprio tipo** (receiver sem qualificar; Go não deixa declarar método num tipo
+de outro pacote):
 
 ```go
-func (c *Converter) Convert(ctx context.Context, obj runtime.Object) (runtime.Object, error) {
-    switch obj := obj.(type) {
-    case *v1alpha1.MyApp:
-        return convertV1alpha1ToV1beta1(obj), nil
-    case *v1beta1.MyApp:
-        return convertV1beta1ToV1(obj), nil
-    default:
-        return nil, fmt.Errorf("unsupported type")
-    }
+// api/v1/myapp_conversion.go — a storage version (hub) só se marca como hub:
+func (*MyApp) Hub() {}
+```
+
+```go
+// api/v1alpha1/myapp_conversion.go — o spoke converte de/para o hub:
+import v1 "github.com/exemplo/myapp/api/v1"
+
+func (src *MyApp) ConvertTo(dstRaw conversion.Hub) error {
+    dst := dstRaw.(*v1.MyApp)
+    dst.ObjectMeta = src.ObjectMeta
+    // ... mapeia os campos de v1alpha1 para v1
+    return nil
+}
+
+func (dst *MyApp) ConvertFrom(srcRaw conversion.Hub) error {
+    src := srcRaw.(*v1.MyApp)
+    dst.ObjectMeta = src.ObjectMeta
+    // ... mapeia os campos de v1 para v1alpha1
+    return nil
 }
 ```
 
@@ -104,13 +112,6 @@ flowchart TD
         O1 -.-> O2 -.-> O3
     end
     
-    classDef default fill:#f0f0f0,stroke:#333,stroke-width:2px
-    classDef resources fill:#ccffcc,stroke:#333
-    classDef order fill:#e6f3ff,stroke:#333
-    
-    class DEP default
-    class DB,SVC,SEC resources
-    class ORDER,O1,O2,O3 order
 ```
 
 ### Implementação de Dependências
@@ -151,10 +152,6 @@ flowchart LR
         L2 -.->|"monitora"| LOCK
         L3 -.->|"monitora"| LOCK
     end
-    
-    style LE fill:#f0f0f0,stroke:#333,stroke-width:2px
-    style L1 fill:#ccffcc,stroke:#333
-    style L2,L3 fill:#ffcccc,stroke:#333
 ```
 
 ### Implementação
@@ -162,13 +159,18 @@ flowchart LR
 ```go
 func main() {
     mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-        LeaderElection:          true,
-        LeaderElectionID:        "myapp-operator",
-        LeaderElectionNamespace: "default",
+        LeaderElection:   true,
+        LeaderElectionID: "myapp-operator",
+        // Sem LeaderElectionNamespace: o manager usa o próprio namespace (in-cluster).
+        // Fixar "default" colocaria o Lease no lugar errado.
     })
     // ...
 }
 ```
+
+Standby é estado normal, não falha: só o líder reconcilia; os demais seguram o `Lease` esperando. O resource lock
+default já é `leases`. Depois que `mgr.Start` retornar, o binário deve sair na hora — perdeu o lock. Rodando **fora** do
+cluster (`make run`), não há namespace in-cluster: desligue o leader election ou passe `LeaderElectionNamespace`.
 
 ## 5. Rate Limiting e Backoff
 
@@ -192,18 +194,18 @@ flowchart TD
     end
     
     POL -->|"implementa"| RL1
-    
-    style RL fill:#f0f0f0,stroke:#333,stroke-width:2px
-    style POL fill:#e6f3ff,stroke:#333,stroke-width:2px
 ```
 
-### Implementação
+Na prática você quase nunca constrói a fila à mão: o controller já usa `workqueue.DefaultTypedControllerRateLimiter[reconcile.Request]()`
+(backoff exponencial de 5 ms a 1000 s, com um teto por token bucket). Para trocar, passe `RateLimiter` em
+`SetupWithManager` via `controller.Options`. As filas do client-go hoje são **genéricas** (tipadas) — o k8s 1.37 deste
+treinamento já as usa:
 
 ```go
-// Configuração de Rate Limiting
-workqueue.NewRateLimitingQueue(workqueue.NewMaxOfRateLimiter(
-    workqueue.NewItemExponentialFailureRateLimiter(5*time.Millisecond, 1000*time.Second),
-    &workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(10), 100)},
+// Equivalente ao default, montado à mão (note os tipos):
+workqueue.NewTypedRateLimitingQueue(workqueue.NewTypedMaxOfRateLimiter[reconcile.Request](
+    workqueue.NewTypedItemExponentialFailureRateLimiter[reconcile.Request](5*time.Millisecond, 1000*time.Second),
+    &workqueue.TypedBucketRateLimiter[reconcile.Request]{Limiter: rate.NewLimiter(rate.Limit(10), 100)},
 ))
 ```
 
@@ -231,9 +233,6 @@ flowchart LR
     end
     
     PROM -->|"gera"| AM
-    
-    style OBS fill:#f0f0f0,stroke:#333,stroke-width:2px
-    style ALERT fill:#e6f3ff,stroke:#333,stroke-width:2px
 ```
 
 ### Métricas Customizadas
@@ -280,9 +279,6 @@ flowchart TD
     end
     
     CTRL["Operator Controller"] -->|"gerencia"| MT
-    
-    style MT fill:#f0f0f0,stroke:#333,stroke-width:2px
-    style T1,T2 fill:#e6f3ff,stroke:#333,stroke-width:2px
 ```
 
 ### Implementação
@@ -306,107 +302,16 @@ func (r *Reconciler) reconcileTenant(ctx context.Context, tenant string) error {
 }
 ```
 
-## 8. Patterns de Deployment
+## 8. Outros padrões que o operator pode orquestrar
 
-### Estratégias Avançadas
-
-```mermaid
-flowchart LR
-    subgraph DEPLOY ["Deployment Strategies"]
-        BG["Blue-Green"]
-        CAN["Canary"]
-        AB["A/B Testing"]
-    end
-    
-    subgraph CTRL ["Controller"]
-        TRAF["Traffic Control"]
-        MON["Monitoring"]
-        ROLL["Rollback Logic"]
-    end
-    
-    DEPLOY -->|"implementa"| CTRL
-    
-    style DEPLOY fill:#f0f0f0,stroke:#333,stroke-width:2px
-    style CTRL fill:#e6f3ff,stroke:#333,stroke-width:2px
-```
-
-## 9. Integração com Service Mesh
-
-### Arquitetura com Service Mesh
-
-```mermaid
-flowchart TD
-    subgraph SM ["Service Mesh"]
-        PROXY["Sidecar Proxy"]
-        CTRL["Mesh Control Plane"]
-        POL["Traffic Policies"]
-    end
-    
-    subgraph OP ["Operator"]
-        RECON["Reconciler"]
-        MESH["Mesh Config"]
-    end
-    
-    OP -->|"configura"| SM
-    
-    style SM fill:#f0f0f0,stroke:#333,stroke-width:2px
-    style OP fill:#e6f3ff,stroke:#333,stroke-width:2px
-```
-
-## 10. Extensibilidade
-
-### Arquitetura Plugável
-
-```mermaid
-flowchart LR
-    subgraph PLUG ["Sistema de Plugins"]
-        CORE["Core Controller"]
-        REG["Plugin Registry"]
-        
-        P1["Plugin 1"]
-        P2["Plugin 2"]
-        P3["Plugin 3"]
-    end
-    
-    REG -->|"registra"| P1 & P2 & P3
-    CORE -->|"usa"| REG
-    
-    style PLUG fill:#f0f0f0,stroke:#333,stroke-width:2px
-```
-
-### Implementação
-
-```go
-// Interface de Plugin
-type Plugin interface {
-    Name() string
-    Init(ctx context.Context) error
-    Reconcile(ctx context.Context, obj runtime.Object) error
-}
-
-// Registro de Plugins
-type PluginRegistry struct {
-    plugins map[string]Plugin
-}
-
-func (r *PluginRegistry) Register(p Plugin) {
-    r.plugins[p.Name()] = p
-}
-```
+Fora do escopo deste material, mas o mesmo loop de reconcile serve para: estratégias de deployment (blue-green,
+canary, A/B) controlando o tráfego entre versões; integração com service mesh, gerando a config do mesh a partir do
+CR; e arquiteturas plugáveis, com um registro de plugins que o controller chama na reconciliação. Cada um é um
+conjunto de ensurers a mais na chain, com o mesmo contrato de idempotência.
 
 ## Conclusão
 
-Estes tópicos avançados são cruciais para desenvolver Operators robustos e escaláveis. Cada aspecto requer consideração cuidadosa e implementação apropriada conforme os requisitos específicos do seu caso de uso.
-
-Pontos-chave para lembrar:
-
-1. Use Admission Controllers para validação e mutação
-2. Planeje migrações de versão com antecedência
-3. Gerencie dependências adequadamente
-4. Implemente alta disponibilidade
-5. Configure rate limiting e backoff
-6. Monitore e colete métricas
-7. Considere multi-tenancy desde o início
-8. Use padrões de deployment apropriados
-9. Integre com service mesh quando necessário
-10. Mantenha o código extensível
+O loop de reconcile é sempre o mesmo; o que muda é o que cada ensurer garante. Ao crescer um operator, as decisões
+que mais importam são: validar no API Server (marcadores e CEL) antes de recorrer a webhook; planejar a storage
+version e a conversão Hub-and-Spoke cedo; manter cada ensurer idempotente; e confiar no default do controller-runtime
+(rate limiting, leader election, métricas) em vez de reimplementá-lo.

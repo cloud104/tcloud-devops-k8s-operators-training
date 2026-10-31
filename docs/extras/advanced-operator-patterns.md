@@ -20,9 +20,6 @@ flowchart TD
         E2 -->|"reage àquela mudança"| E3[Ação]
         E3 -.->|"evento perdido = estado errado"| E1
     end
-
-    style LT fill:#f0f0f0,stroke:#333,stroke-width:2px
-    style ET fill:#e6f3ff,stroke:#333,stroke-width:2px
 ```
 
 #### Level Triggered (o modelo do controller-runtime)
@@ -78,11 +75,6 @@ flowchart TD
         D -->|"owner"| P2["Pod 2"]
         D -->|"owner"| P3["Pod 3"]
     end
-    
-    style OWN fill:#f0f0f0,stroke:#333,stroke-width:2px
-    style CR fill:#ffccff,stroke:#cc66ff
-    style D,S,C fill:#ccccff,stroke:#6666ff
-    style P1,P2,P3 fill:#ccffcc,stroke:#00cc00
 ```
 
 #### Implementação
@@ -154,9 +146,6 @@ flowchart LR
     WATCH -->|"Detecta mudanças"| RECONCILE
     RECONCILE -->|"Atualiza"| STATUS
     RECONCILE -->|"Atualiza"| COND
-    
-    style CR fill:#f0f0f0,stroke:#333,stroke-width:2px
-    style CTRL fill:#e6f3ff,stroke:#333,stroke-width:2px
 ```
 
 #### Exemplo de Status
@@ -177,6 +166,17 @@ status:
 `CreateOrUpdate` de vários Deployments de uma vez sobe tudo junto. Quando a aplicação tem ordem (um componente migra
 o banco e os outros só podem subir depois), a chain precisa de um **gate**: o ensurer só avança quando o anterior
 terminou, e devolve requeue enquanto espera.
+
+```mermaid
+flowchart TD
+    REC["Reconcile"] --> M["sobe o migrator"]
+    M --> G{"migrator pronto?<br/>observedGeneration == generation<br/>e réplicas disponíveis"}
+    G -->|não| W["requeue: workers ficam parados"]
+    W -.->|próxima passada| REC
+    G -->|sim| K["libera os workers"]
+    K --> R["Ready"]
+    R -.->|"na descida, ordem inversa:<br/>drena os workers antes de reiniciar o migrator"| REC
+```
 
 ```go
 if migrator.Status.AvailableReplicas < *migrator.Spec.Replicas {
@@ -206,12 +206,6 @@ flowchart TD
         REST["Restore Job"] -->|"Recupera"| SNAP
         REST -->|"Restaura"| DB["Database"]
     end
-    
-    style BACKUP fill:#f0f0f0,stroke:#333,stroke-width:2px
-    style SCHED fill:#ffccff,stroke:#cc66ff
-    style JOB,REST fill:#ccccff,stroke:#6666ff
-    style SNAP,STORE fill:#ccffcc,stroke:#00cc00
-    style DB fill:#ffffcc,stroke:#cccc00
 ```
 
 ## 5. Monitoramento e Observabilidade
@@ -229,10 +223,6 @@ flowchart LR
         CTRL -->|"Expõe"| MET
         CTRL -->|"Emite"| EVT
     end
-    
-    style OBS fill:#f0f0f0,stroke:#333,stroke-width:2px
-    style LOG,MET,EVT fill:#ccccff,stroke:#6666ff
-    style CTRL fill:#ffccff,stroke:#cc66ff
 ```
 
 #### Exemplo de Métricas
@@ -263,11 +253,6 @@ flowchart LR
         LB -->|"Traffic"| BLUE
         LB -.->|"Switch"| GREEN
     end
-    
-    style BG fill:#f0f0f0,stroke:#333,stroke-width:2px
-    style BLUE fill:#ccccff,stroke:#6666ff
-    style GREEN fill:#ccffcc,stroke:#00cc00
-    style LB fill:#ffffcc,stroke:#cccc00
 ```
 
 ## 7. Multi-cluster Management
@@ -291,9 +276,6 @@ flowchart TD
     
     CTRL -->|"Gerencia"| A1 & A2
     SYNC -->|"Sincroniza"| R1 & R2
-    
-    style CENTRAL fill:#f0f0f0,stroke:#333,stroke-width:2px
-    style C1,C2 fill:#e6f3ff,stroke:#333,stroke-width:2px
 ```
 
 ## Boas Práticas

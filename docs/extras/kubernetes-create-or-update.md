@@ -27,14 +27,6 @@ flowchart TD
     C --> E
     E --> F[Aplicar mudanças]
     F --> G[Retornar operação]
-
-    style A fill:#f9f9f9,stroke:#333
-    style B fill:#ffcccc,stroke:#333
-    style C fill:#ccffcc,stroke:#333
-    style D fill:#ccffcc,stroke:#333
-    style E fill:#cce5ff,stroke:#333
-    style F fill:#ccffcc,stroke:#333
-    style G fill:#f9f9f9,stroke:#333
 ```
 
 ## Owner References
@@ -63,9 +55,6 @@ flowchart TD
     APP -->|"Controla"| DEPLOY
     APP -->|"Controla"| SVC
     APP -->|"Controla"| CM
-    
-    style CR fill:#f0f0f0,stroke:#333,stroke-width:2px
-    style OWNED fill:#e6f3ff,stroke:#333,stroke-width:2px
 ```
 
 ### Exemplo de OwnerReference
@@ -131,15 +120,6 @@ flowchart TD
     G --> H
     H -->|Apply| I[Recursos atualizados]
     
-    classDef default fill:#f9f9f9,stroke:#333
-    classDef process fill:#ffcccc,stroke:#333
-    classDef resource fill:#ccffcc,stroke:#333
-    classDef spec fill:#cce5ff,stroke:#333
-    
-    class A,I default
-    class B,E process
-    class C,F,G resource
-    class D,H spec
 ```
 
 ## Benefícios
@@ -148,39 +128,26 @@ flowchart TD
    - Operações podem ser repetidas com segurança
    - Mesmo resultado independente do número de execuções
 
-2. **Atomicidade**
-   - Mudanças são aplicadas de forma atômica
-   - Evita estados parcialmente aplicados
+2. **Concorrência otimista**, não atomicidade. `CreateOrUpdate` é um ciclo *read-modify-write*: faz `GET`, aplica a
+   função e só então `CREATE`/`UPDATE`. O ciclo **não** é atômico — outro escritor pode mudar o objeto entre o `GET` e o
+   `UPDATE`. O API Server rejeita a escrita por `resourceVersion` desatualizada, e o controller reconcilia de novo. A
+   segurança vem daí e da idempotência, não de uma transação.
 
-3. **Consistência**
-   - Garante que o estado desejado seja alcançado
-   - Mantém a integridade das relações entre recursos
+3. **Consistência eventual**
+   - Devolver erro recoloca na fila; a próxima passada reaplica o estado desejado
+   - As owner references mantêm a integridade entre dono e filhos
 
-4. **Rastreabilidade**
-   - OwnerReferences permitem rastrear relações
-   - Facilita o debugging e a manutenção
-
-5. **Ciclo de Vida Automatizado**
-   - Recursos filhos são deletados quando o pai é removido
-   - Garante limpeza adequada de recursos
+4. **Rastreabilidade e ciclo de vida**
+   - As owner references deixam a hierarquia explícita e facilitam o debugging
+   - O filho é apagado quando o pai some (garbage collection)
 
 ## Boas Práticas
 
-1. **Sempre use SetControllerReference**
-   - Estabelece relação clara de propriedade
-   - Permite garbage collection automático
-
-2. **Implemente Idempotência**
-   - Controllers devem lidar com reconciliações repetidas
-   - Estado final deve ser consistente
-
-3. **Trate Erros Adequadamente**
-   - Implemente retentativas quando apropriado
-   - Log adequado para debugging
-
-4. **Documente Relacionamentos**
-   - Mantenha clara a hierarquia de recursos
-   - Documente o comportamento esperado
+1. **Sempre `SetControllerReference` nos filhos** — é o que liga a deleção em cascata e o `Owns()`.
+2. **Mantenha a função de mutação idempotente** — defina só os campos que são seus; não reescreva o que o cluster
+   preenche (`clusterIP` do Service) nem campos imutáveis (o `selector` do Deployment: proteja com
+   `if deploy.CreationTimestamp.IsZero()` se precisar defini-lo).
+3. **Trate o conflito como normal** — `IsConflict` leva a um novo reconcile, não a um erro fatal.
 
 ## Considerações de Desempenho
 
