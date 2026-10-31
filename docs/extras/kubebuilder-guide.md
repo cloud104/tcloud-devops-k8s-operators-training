@@ -23,11 +23,6 @@ flowchart TD
     end
     
     KB -->|produz| OUT
-    
-    style KB fill:#f0f0f0,stroke:#333,stroke-width:2px
-    style OUT fill:#e6f3ff,stroke:#333,stroke-width:2px
-    style CLI,SCAF,TEST fill:#ffcccc,stroke:#333
-    style CRD,CTRL,RBAC,WEBB fill:#ccffcc,stroke:#333
 ```
 
 ## Arquitetura do Manager
@@ -61,13 +56,6 @@ flowchart TD
     end
     
     API["API Server"] -->|Watch/List| CACHE
-    
-    style MGR fill:#f0f0f0,stroke:#333,stroke-width:2px
-    style CTRL,WH fill:#e6f3ff,stroke:#333,stroke-width:2px
-    style CACHE,CLIENT,SCHEME fill:#ffcccc,stroke:#333
-    style METRICS,HEALTH fill:#ccffcc,stroke:#333
-    style C1,C2,CN fill:#cce5ff,stroke:#333
-    style V,M,C fill:#ffe5cc,stroke:#333
 ```
 
 ## Fluxo de um Controller
@@ -96,11 +84,6 @@ flowchart TD
     
     API["API Server"] -->|Watch/List| WATCH
     REC -->|CRUD| API
-    
-    style CTRL fill:#f0f0f0,stroke:#333,stroke-width:2px
-    style INF fill:#e6f3ff,stroke:#333,stroke-width:2px
-    style PRED,QUEUE,REC fill:#ffcccc,stroke:#333
-    style WATCH,CACHE,HAND fill:#ccffcc,stroke:#333
 ```
 
 ## Setup Básico
@@ -150,7 +133,8 @@ type MyAppStatus struct {
 ```go
 // internal/controller/myapp_controller.go
 func (r *MyAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-    log := r.Log.WithValues("myapp", req.NamespacedName)
+    // O scaffold v4 não tem mais o campo r.Log: o logger vem do contexto.
+    log := logf.FromContext(ctx) // import "sigs.k8s.io/controller-runtime/pkg/log"
     
     // Carregar o CR
     var myApp myappv1alpha1.MyApp
@@ -202,58 +186,73 @@ flowchart LR
     
     API["API Server"] -->|Request| WH
     WH -->|Response| API
-    
-    style WH fill:#f0f0f0,stroke:#333,stroke-width:2px
-    style V,M,C fill:#ffcccc,stroke:#333
 ```
 
 ### Implementação
 
+No Kubebuilder v4 os webhooks não são métodos no tipo da API: o scaffold gera um validator e um defaulter em
+`internal/webhook/<versão>/`, e o objeto chega **tipado** como parâmetro. O builder passou a ser genérico e recebe o
+objeto; a validação devolve `admission.Warnings`:
+
 ```go
-// Webhook de Validação
-func (r *MyApp) ValidateCreate() error {
-    // Lógica de validação
-    return nil
+// internal/webhook/v1alpha1/myapp_webhook.go
+func SetupMyAppWebhookWithManager(mgr ctrl.Manager) error {
+    return ctrl.NewWebhookManagedBy(mgr, &myappv1alpha1.MyApp{}).
+        WithValidator(&MyAppValidator{}).
+        WithDefaulter(&MyAppDefaulter{}).
+        Complete()
 }
 
-// Webhook de Mutação
-func (r *MyApp) Default() {
-    // Lógica de valores default
+type MyAppValidator struct{}
+
+// Objeto já tipado: sem type assertion.
+func (v *MyAppValidator) ValidateCreate(ctx context.Context, obj *myappv1alpha1.MyApp) (admission.Warnings, error) {
+    return nil, nil
+}
+// ValidateUpdate(ctx, oldObj, newObj) e ValidateDelete(ctx, obj) seguem o mesmo formato.
+
+type MyAppDefaulter struct{}
+
+func (d *MyAppDefaulter) Default(ctx context.Context, obj *myappv1alpha1.MyApp) error {
+    return nil
 }
 ```
+
+Para regras simples de validação, prefira marcadores (`+kubebuilder:validation:...`) e **CEL** (`+kubebuilder:validation:XValidation`),
+que rodam no API Server sem webhook. Webhook só quando a regra precisa consultar algo fora do objeto.
 
 ## Testes
 
-O Kubebuilder fornece um framework de testes integrado:
+O scaffold v4 gera testes com **Ginkgo v2 + Gomega** sobre **envtest**: um `etcd` e um `kube-apiserver` de verdade,
+sem kubelet. O `suite_test.go` sobe o `testEnv` e expõe um `k8sClient`. No teste gerado, o `suite_test.go` **não** sobe
+um manager; o `<kind>_controller_test.go` cria o CR e então chama o `Reconcile` do controller **à mão**, de forma
+síncrona, e só depois verifica o resultado:
 
 ```go
 // internal/controller/myapp_controller_test.go
-func TestMyAppController(t *testing.T) {
-    g := gomega.NewGomegaWithT(t)
+var _ = Describe("MyApp controller", func() {
+    It("cria o Deployment ao reconciliar", func(ctx SpecContext) {
+        name := types.NamespacedName{Name: "test-app", Namespace: "default"}
+        app := &myappv1alpha1.MyApp{
+            ObjectMeta: metav1.ObjectMeta{Name: name.Name, Namespace: name.Namespace},
+            Spec:       myappv1alpha1.MyAppSpec{Replicas: ptr.To(int32(3))},
+        }
+        Expect(k8sClient.Create(ctx, app)).To(Succeed())
 
-    // Setup do ambiente de teste
-    ctx := context.Background()
-    mgr, err := ctrl.NewManager(cfg, ctrl.Options{Scheme: scheme.Scheme})
-    g.Expect(err).NotTo(gomega.HaveOccurred())
+        reconciler := &MyAppReconciler{Client: k8sClient, Scheme: k8sClient.Scheme()}
+        _, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: name})
+        Expect(err).NotTo(HaveOccurred())
 
-    // Testes
-    myApp := &myappv1alpha1.MyApp{
-        ObjectMeta: metav1.ObjectMeta{
-            Name:      "test-app",
-            Namespace: "default",
-        },
-        Spec: myappv1alpha1.MyAppSpec{
-            Replicas: ptr.To(int32(3)),
-        },
-    }
-
-    // Criar recurso
-    g.Expect(k8sClient.Create(ctx, myApp)).To(gomega.Succeed())
-
-    // Verificar reconciliação
-    // ...
-}
+        dep := &appsv1.Deployment{}
+        Expect(k8sClient.Get(ctx, name, dep)).To(Succeed())
+    })
+})
 ```
+
+Como não há kubelet, o Pod nunca fica `Running` sozinho: o teste escreve o `status` do Deployment à mão quando precisa
+simular réplicas disponíveis. Se você preferir subir um manager no `BeforeSuite` (reconcile assíncrono), aí sim use
+`Eventually` para esperar o estado convergir. A CEL (`XValidation`) roda de verdade no envtest, porque o API Server é
+real.
 
 ## Boas Práticas
 
@@ -277,12 +276,8 @@ func TestMyAppController(t *testing.T) {
    - Use `+kubebuilder:rbac` markers
    - Valide permissões em testes
 
-## Conclusão
+## Próximos passos
 
-O Kubebuilder proporciona uma estrutura robusta para desenvolver Operators Kubernetes, com:
-
-- Geração automática de código e manifests
-- Padrões estabelecidos de implementação
-- Ferramentas de teste integradas
-- Suporte a webhooks e validação
-- Gerenciamento eficiente de recursos através de informers compartilhados
+- Webhooks, conversão de versões, leader election e rate limiting: [Tópicos avançados](advanced-operator-topics.md).
+- O lab aplica tudo isto num operator pequeno: [`03-desenvolvimento.md`](../03-desenvolvimento.md).
+- Referência oficial: [Kubebuilder Book](https://book.kubebuilder.io/).
