@@ -3,6 +3,7 @@
 ## 1. Admission Controllers em Operators
 
 Admission Controllers permitem validar e/ou modificar requisições ao Kubernetes antes que sejam persistidas.
+
 ```mermaid
 flowchart LR
     subgraph AC["Admission Controls"]
@@ -17,6 +18,7 @@ flowchart LR
 ```
 
 ### Implementação
+
 ```go
 // Webhook de Validação
 func (v *Validator) Handle(ctx context.Context, req admission.Request) admission.Response {
@@ -37,6 +39,7 @@ func (v *Validator) Handle(ctx context.Context, req admission.Request) admission
 ## 2. Padrões de Migração de Versão
 
 ### Estratégias de Conversão
+
 ```mermaid
 flowchart TD
     subgraph VER ["Versões da API"]
@@ -49,7 +52,7 @@ flowchart TD
     end
     
     subgraph COMP ["Compatibilidade"]
-        STORE["Storage Version = Hub"]
+        STORE["Hub (em geral a storage version)"]
         SERVED["Served Versions"]
     end
     
@@ -61,19 +64,26 @@ O controller-runtime usa um modelo **Hub-and-Spoke**, não uma cadeia. A *storag
 versão é um **Spoke** que converte direto de/para o Hub. Não existe `v1alpha1 → v1beta1 → v1`: todo spoke fala com o
 hub. O handler de conversão genérico chama os métodos abaixo (pacote `sigs.k8s.io/controller-runtime/pkg/conversion`):
 
-```go
-// A storage version (hub) só marca que é o hub:
-func (*v1.MyApp) Hub() {}
+Cada método é declarado **no pacote do próprio tipo** (receiver sem qualificar; Go não deixa declarar método num tipo
+de outro pacote):
 
-// Cada spoke converte de/para o hub:
-func (src *v1alpha1.MyApp) ConvertTo(dstRaw conversion.Hub) error {
+```go
+// api/v1/myapp_conversion.go — a storage version (hub) só se marca como hub:
+func (*MyApp) Hub() {}
+```
+
+```go
+// api/v1alpha1/myapp_conversion.go — o spoke converte de/para o hub:
+import v1 "github.com/exemplo/myapp/api/v1"
+
+func (src *MyApp) ConvertTo(dstRaw conversion.Hub) error {
     dst := dstRaw.(*v1.MyApp)
     dst.ObjectMeta = src.ObjectMeta
     // ... mapeia os campos de v1alpha1 para v1
     return nil
 }
 
-func (dst *v1alpha1.MyApp) ConvertFrom(srcRaw conversion.Hub) error {
+func (dst *MyApp) ConvertFrom(srcRaw conversion.Hub) error {
     src := srcRaw.(*v1.MyApp)
     dst.ObjectMeta = src.ObjectMeta
     // ... mapeia os campos de v1 para v1alpha1
@@ -82,6 +92,7 @@ func (dst *v1alpha1.MyApp) ConvertFrom(srcRaw conversion.Hub) error {
 ```
 
 ## 3. Gestão de Dependências
+
 ```mermaid
 flowchart TD
     subgraph DEP["Gestão de Dependências"]
@@ -104,6 +115,7 @@ flowchart TD
 ```
 
 ### Implementação de Dependências
+
 ```go
 func (r *Reconciler) ensureDependencies(ctx context.Context, obj *myappv1.MyApp) error {
     // 1. Garantir Secret
@@ -126,6 +138,7 @@ func (r *Reconciler) ensureDependencies(ctx context.Context, obj *myappv1.MyApp)
 ## 4. Alta Disponibilidade
 
 ### Leader Election
+
 ```mermaid
 flowchart LR
     subgraph LE ["Leader Election"]
@@ -142,6 +155,7 @@ flowchart LR
 ```
 
 ### Implementação
+
 ```go
 func main() {
     mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
@@ -155,11 +169,13 @@ func main() {
 ```
 
 Standby é estado normal, não falha: só o líder reconcilia; os demais seguram o `Lease` esperando. O resource lock
-default já é `leases`. Depois que `mgr.Start` retornar, o binário deve sair na hora — perdeu o lock.
+default já é `leases`. Depois que `mgr.Start` retornar, o binário deve sair na hora — perdeu o lock. Rodando **fora** do
+cluster (`make run`), não há namespace in-cluster: desligue o leader election ou passe `LeaderElectionNamespace`.
 
 ## 5. Rate Limiting e Backoff
 
 ### Estratégias de Rate Limiting
+
 ```mermaid
 flowchart TD
     subgraph RL ["Rate Limiting"]
@@ -182,7 +198,8 @@ flowchart TD
 
 Na prática você quase nunca constrói a fila à mão: o controller já usa `workqueue.DefaultTypedControllerRateLimiter[reconcile.Request]()`
 (backoff exponencial de 5 ms a 1000 s, com um teto por token bucket). Para trocar, passe `RateLimiter` em
-`SetupWithManager` via `controller.Options`. Desde o client-go do k8s 1.37 as filas são **genéricas** (tipadas):
+`SetupWithManager` via `controller.Options`. As filas do client-go hoje são **genéricas** (tipadas) — o k8s 1.37 deste
+treinamento já as usa:
 
 ```go
 // Equivalente ao default, montado à mão (note os tipos):
@@ -195,6 +212,7 @@ workqueue.NewTypedRateLimitingQueue(workqueue.NewTypedMaxOfRateLimiter[reconcile
 ## 6. Métricas e Monitoramento
 
 ### Arquitetura de Observabilidade
+
 ```mermaid
 flowchart LR
     subgraph OBS ["Observabilidade"]
@@ -218,6 +236,7 @@ flowchart LR
 ```
 
 ### Métricas Customizadas
+
 ```go
 var (
     reconcileTotal = prometheus.NewCounterVec(
@@ -242,6 +261,7 @@ var (
 ## 7. Multi-tenancy
 
 ### Arquitetura Multi-tenant
+
 ```mermaid
 flowchart TD
     subgraph MT ["Multi-tenancy"]
@@ -262,6 +282,7 @@ flowchart TD
 ```
 
 ### Implementação
+
 ```go
 // Configuração por Tenant
 type TenantConfig struct {

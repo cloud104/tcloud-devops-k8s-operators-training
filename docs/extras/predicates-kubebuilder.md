@@ -3,6 +3,7 @@
 ## O que são Predicates?
 
 Predicates são filtros que determinam se um evento deve ou não disparar uma reconciliação. Eles ajudam a reduzir a carga no controller, evitando reconciliações desnecessárias.
+
 ```mermaid
 flowchart TD
     E[Evento] -->|Recebido| P{Predicate}
@@ -11,6 +12,7 @@ flowchart TD
 ```
 
 ## Tipos de Predicates
+
 ```mermaid
 flowchart LR
     subgraph PRE ["Predicates Comuns"]
@@ -34,6 +36,7 @@ flowchart LR
 ## Implementação de Predicates
 
 ### 1. Predicates Padrão
+
 ```go
 // Usando um predicate padrão
 func (r *MyAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -49,6 +52,7 @@ func (r *MyAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 intenção clara.
 
 ### 2. Predicates Customizados
+
 ```go
 // Predicate customizado
 type MyCustomPredicate struct {
@@ -76,6 +80,7 @@ func (MyCustomPredicate) Delete(e event.DeleteEvent) bool {
 ```
 
 ## Fluxo de Eventos com Predicates
+
 ```mermaid
 flowchart TD
     subgraph EVENTS ["Eventos"]
@@ -109,6 +114,7 @@ flowchart TD
 ### 1. And Predicate
 
 Combina múltiplos predicates com operação AND lógica.
+
 ```go
 // Todos os predicates devem retornar true
 predicate.And(
@@ -120,6 +126,7 @@ predicate.And(
 ### 2. Or Predicate
 
 Combina múltiplos predicates com operação OR lógica.
+
 ```go
 // Pelo menos um predicate deve retornar true
 predicate.Or(
@@ -131,6 +138,7 @@ predicate.Or(
 ## Casos de Uso Comuns
 
 1. **Ignorar Status Updates**
+
 ```go
 type IgnoreStatusUpdatePredicate struct {
     predicate.Funcs
@@ -145,6 +153,7 @@ func (IgnoreStatusUpdatePredicate) Update(e event.UpdateEvent) bool {
 ```
 
 2. **Filtrar por Label**
+
 ```go
 type LabelFilterPredicate struct {
     predicate.Funcs
@@ -158,6 +167,7 @@ func (p LabelFilterPredicate) Create(e event.CreateEvent) bool {
 ```
 
 3. **Filtrar por Annotation**
+
 ```go
 type AnnotationFilterPredicate struct {
     predicate.Funcs

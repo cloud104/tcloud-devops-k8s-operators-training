@@ -5,6 +5,7 @@
 Informers são um padrão fundamental no Kubernetes que fornece um mecanismo eficiente para observar e reagir a mudanças nos recursos do cluster. Eles são especialmente importantes no desenvolvimento de Controllers e Operators.
 
 ## Arquitetura de Informers
+
 ```mermaid
 flowchart TD
     subgraph API ["API Server"]
@@ -59,6 +60,7 @@ flowchart TD
 - Permitem lógica customizada por tipo de evento
 
 ## Fluxo de Informações
+
 ```mermaid
 sequenceDiagram
     participant API as API Server
@@ -99,6 +101,7 @@ sequenceDiagram
    - Reduz carga no API Server
 
 ## Exemplo de Implementação
+
 ```go
 // Criando um SharedInformerFactory
 informerFactory := informers.NewSharedInformerFactory(client, time.Hour*24)
