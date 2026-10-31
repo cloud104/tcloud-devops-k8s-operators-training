@@ -1,6 +1,6 @@
 # Conceitos Básicos de Operators Kubernetes
 
-Só o que o lab e a demo usam. Finalizer, rollout ordenado, predicates e informers estão em [`extras/`](extras/).
+Só o que o lab e a demo usam. Finalizer, rollout ordenado, predicates e informers estão nas [leituras extras](extras/README.md).
 
 ## Por que operators
 

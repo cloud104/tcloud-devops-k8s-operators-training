@@ -12,7 +12,7 @@ conduzida ao vivo.
 | [`docs/01-conceitos-basicos.md`](docs/01-conceitos-basicos.md) | CRD, controller, reconcile, level-triggered |
 | [`docs/02-setup-ambiente.md`](docs/02-setup-ambiente.md) | Ferramentas, versões pinadas e cluster |
 | [`docs/03-desenvolvimento.md`](docs/03-desenvolvimento.md) | Passo a passo do lab |
-| [`docs/extras/`](docs/extras/) | Leitura: finalizer, rollout ordenado, predicates, informers |
+| [`docs/extras/README.md`](docs/extras/README.md) | Índice das leituras: finalizer, rollout ordenado, predicates, informers |
 
 ## Início rápido
 
