@@ -6,6 +6,7 @@
 
 Os dois termos descrevem **o que a lógica olha**, não com que frequência ela roda. Eventos disparam o reconcile nos
 dois casos.
+
 ```mermaid
 flowchart TD
     subgraph LT ["Level Triggered"]
@@ -30,6 +31,7 @@ flowchart TD
   - Reiniciar o operator é seguro: ao subir, ele reconcilia tudo
 
 `Owns()` e `Watches()` decidem **quando** acordar; o que o `Reconcile` faz não depende de qual evento foi.
+
 ```go
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
     return ctrl.NewControllerManagedBy(mgr).
@@ -45,6 +47,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 `RequeueAfter` é para o que **não gera evento**, como um estado externo que precisa ser consultado. Não é o que torna
 o controller level-triggered.
+
 ```go
 return ctrl.Result{RequeueAfter: time.Minute * 5}, nil
 ```
@@ -59,6 +62,7 @@ Evite em operators. Se o código precisa saber "o que mudou", normalmente falta 
 ## 2. Gerenciamento de Recursos
 
 ### Owner References
+
 ```mermaid
 flowchart TD
     subgraph OWN ["Hierarquia de Recursos"]
@@ -74,6 +78,7 @@ flowchart TD
 ```
 
 #### Implementação
+
 ```yaml
 apiVersion: v1
 kind: Pod
@@ -88,6 +93,7 @@ metadata:
 ```
 
 ### Finalizers
+
 ```mermaid
 sequenceDiagram
     actor User
@@ -117,6 +123,7 @@ sequenceDiagram
 ## 3. Status e Condições
 
 ### Status Subresource
+
 ```mermaid
 flowchart LR
     subgraph CR ["Custom Resource"]
@@ -142,6 +149,7 @@ flowchart LR
 ```
 
 #### Exemplo de Status
+
 ```yaml
 status:
   phase: Provisioning
@@ -187,6 +195,7 @@ Pontos que mordem:
   reiniciar quem migra.
 
 ## 4. Padrões de Backup e Recuperação
+
 ```mermaid
 flowchart TD
     subgraph BACKUP ["Sistema de Backup"]
@@ -202,6 +211,7 @@ flowchart TD
 ## 5. Monitoramento e Observabilidade
 
 ### Métricas e Logs
+
 ```mermaid
 flowchart LR
     subgraph OBS ["Observabilidade"]
@@ -216,6 +226,7 @@ flowchart LR
 ```
 
 #### Exemplo de Métricas
+
 ```go
 var (
     reconcileTotal = prometheus.NewCounterVec(
@@ -231,6 +242,7 @@ var (
 ## 6. Deployment Strategies
 
 ### Blue-Green Deployment
+
 ```mermaid
 flowchart LR
     subgraph BG ["Blue-Green Deployment"]
@@ -244,6 +256,7 @@ flowchart LR
 ```
 
 ## 7. Multi-cluster Management
+
 ```mermaid
 flowchart TD
     subgraph CENTRAL ["Control Plane Central"]

@@ -3,6 +3,7 @@
 ## O que é o Kubebuilder?
 
 Kubebuilder é um framework para construir Kubernetes APIs e controllers usando CRDs (Custom Resource Definitions). Ele proporciona uma estrutura padronizada e ferramentas para desenvolver Operators de forma eficiente.
+
 ```mermaid
 flowchart TD
     subgraph KB ["Kubebuilder"]
@@ -27,6 +28,7 @@ flowchart TD
 ## Arquitetura do Manager
 
 O Manager é o componente central em um projeto Kubebuilder. Ele gerencia controllers, webhooks e recursos compartilhados.
+
 ```mermaid
 flowchart TD
     subgraph MGR ["Manager"]
@@ -59,6 +61,7 @@ flowchart TD
 ## Fluxo de um Controller
 
 Diagrama mostrando como um controller processa recursos:
+
 ```mermaid
 flowchart TD
     subgraph CTRL ["Controller"]
@@ -86,6 +89,7 @@ flowchart TD
 ## Setup Básico
 
 ### 1. Inicialização do Projeto
+
 ```bash
 # Inicializar novo projeto
 kubebuilder init --domain my.domain.com --repo my.domain.com/myproject
@@ -95,6 +99,7 @@ kubebuilder create api --group apps --version v1alpha1 --kind MyApp
 ```
 
 ### 2. Estrutura do Projeto
+
 ```bash
 .
 ├── api/                    # Definições de API (CRDs)
@@ -109,6 +114,7 @@ kubebuilder create api --group apps --version v1alpha1 --kind MyApp
 ## Implementação do Controller
 
 ### 1. Definição da API (CRD)
+
 ```go
 // api/v1alpha1/myapp_types.go
 type MyAppSpec struct {
@@ -123,6 +129,7 @@ type MyAppStatus struct {
 ```
 
 ### 2. Reconciler
+
 ```go
 // internal/controller/myapp_controller.go
 func (r *MyAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -143,6 +150,7 @@ func (r *MyAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 ## Uso de Informers
 
 O Kubebuilder utiliza SharedInformers através do Manager para eficiência:
+
 ```go
 // Setup do Controller com Informers
 func (r *MyAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -164,6 +172,7 @@ veria as réplicas ficarem disponíveis.
 ## Webhooks
 
 ### Tipos de Webhooks
+
 ```mermaid
 flowchart LR
     subgraph WH ["Webhooks"]
@@ -181,24 +190,30 @@ flowchart LR
 
 ### Implementação
 
-No Kubebuilder v4 os webhooks não são métodos no tipo da API: o scaffold gera um `CustomValidator` e um
-`CustomDefaulter` em `internal/webhook/<versão>/`, e o objeto chega como parâmetro. As assinaturas mudaram (recebem
-`ctx` e `obj`; a validação devolve `admission.Warnings`):
+No Kubebuilder v4 os webhooks não são métodos no tipo da API: o scaffold gera um validator e um defaulter em
+`internal/webhook/<versão>/`, e o objeto chega **tipado** como parâmetro. O builder passou a ser genérico e recebe o
+objeto; a validação devolve `admission.Warnings`:
 
 ```go
 // internal/webhook/v1alpha1/myapp_webhook.go
-type MyAppCustomValidator struct{}
+func SetupMyAppWebhookWithManager(mgr ctrl.Manager) error {
+    return ctrl.NewWebhookManagedBy(mgr, &myappv1alpha1.MyApp{}).
+        WithValidator(&MyAppValidator{}).
+        WithDefaulter(&MyAppDefaulter{}).
+        Complete()
+}
 
-func (v *MyAppCustomValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-    app := obj.(*myappv1alpha1.MyApp)
-    _ = app
+type MyAppValidator struct{}
+
+// Objeto já tipado: sem type assertion.
+func (v *MyAppValidator) ValidateCreate(ctx context.Context, obj *myappv1alpha1.MyApp) (admission.Warnings, error) {
     return nil, nil
 }
 // ValidateUpdate(ctx, oldObj, newObj) e ValidateDelete(ctx, obj) seguem o mesmo formato.
 
-type MyAppCustomDefaulter struct{}
+type MyAppDefaulter struct{}
 
-func (d *MyAppCustomDefaulter) Default(ctx context.Context, obj runtime.Object) error {
+func (d *MyAppDefaulter) Default(ctx context.Context, obj *myappv1alpha1.MyApp) error {
     return nil
 }
 ```
@@ -209,30 +224,35 @@ que rodam no API Server sem webhook. Webhook só quando a regra precisa consulta
 ## Testes
 
 O scaffold v4 gera testes com **Ginkgo v2 + Gomega** sobre **envtest**: um `etcd` e um `kube-apiserver` de verdade,
-sem kubelet. O `suite_test.go` sobe o `testEnv` e expõe um `k8sClient`; cada `<kind>_controller_test.go` descreve o
-comportamento com `Describe`/`It`. Como não há kubelet, o Pod nunca fica `Running` sozinho — o teste escreve o
-`status` do Deployment à mão quando precisa simular réplicas disponíveis.
+sem kubelet. O `suite_test.go` sobe o `testEnv` e expõe um `k8sClient`. No teste gerado, o `suite_test.go` **não** sobe
+um manager; o `<kind>_controller_test.go` cria o CR e então chama o `Reconcile` do controller **à mão**, de forma
+síncrona, e só depois verifica o resultado:
 
 ```go
 // internal/controller/myapp_controller_test.go
 var _ = Describe("MyApp controller", func() {
-    It("cria o Deployment e publica o status", func(ctx SpecContext) {
+    It("cria o Deployment ao reconciliar", func(ctx SpecContext) {
+        name := types.NamespacedName{Name: "test-app", Namespace: "default"}
         app := &myappv1alpha1.MyApp{
-            ObjectMeta: metav1.ObjectMeta{Name: "test-app", Namespace: "default"},
+            ObjectMeta: metav1.ObjectMeta{Name: name.Name, Namespace: name.Namespace},
             Spec:       myappv1alpha1.MyAppSpec{Replicas: ptr.To(int32(3))},
         }
         Expect(k8sClient.Create(ctx, app)).To(Succeed())
 
+        reconciler := &MyAppReconciler{Client: k8sClient, Scheme: k8sClient.Scheme()}
+        _, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: name})
+        Expect(err).NotTo(HaveOccurred())
+
         dep := &appsv1.Deployment{}
-        Eventually(func() error {
-            return k8sClient.Get(ctx, types.NamespacedName{Name: "test-app", Namespace: "default"}, dep)
-        }).Should(Succeed())
+        Expect(k8sClient.Get(ctx, name, dep)).To(Succeed())
     })
 })
 ```
 
-`Eventually` é essencial: o reconcile é assíncrono, então o teste espera o estado convergir, nunca checa na hora.
-A CEL (`XValidation`) roda de verdade no envtest, porque o API Server é real.
+Como não há kubelet, o Pod nunca fica `Running` sozinho: o teste escreve o `status` do Deployment à mão quando precisa
+simular réplicas disponíveis. Se você preferir subir um manager no `BeforeSuite` (reconcile assíncrono), aí sim use
+`Eventually` para esperar o estado convergir. A CEL (`XValidation`) roda de verdade no envtest, porque o API Server é
+real.
 
 ## Boas Práticas
 

@@ -5,6 +5,7 @@
 O padrão CreateOrUpdate é uma abstração comum em controllers Kubernetes que facilita a gestão de recursos, implementando a lógica de "criar ou atualizar" (upsert) de forma padronizada.
 
 ### Estrutura Básica
+
 ```go
 op, err := ctrl.CreateOrUpdate(ctx, r.Client, deploy, func() error {
     r.specDeployment(app, deploy)
@@ -16,6 +17,7 @@ A função de mutação deve definir só os campos que são do operator. Atribui
 API Server preencheu: no Service, o `clusterIP`. Cada reconcile vira uma escrita, ou um erro.
 
 ### Fluxo de Execução
+
 ```mermaid
 flowchart TD
     A[Início] --> B{Objeto existe?}
@@ -32,6 +34,7 @@ flowchart TD
 OwnerReferences estabelecem relações hierárquicas entre recursos no Kubernetes, permitindo o gerenciamento automático do ciclo de vida dos recursos.
 
 ### Estrutura das OwnerReferences
+
 ```mermaid
 flowchart TD
     subgraph CR ["Custom Resource"]
@@ -55,6 +58,7 @@ flowchart TD
 ```
 
 ### Exemplo de OwnerReference
+
 ```yaml
 metadata:
   ownerReferences:
@@ -69,6 +73,7 @@ metadata:
 ## Implementação em Controllers
 
 ### Exemplo Completo
+
 ```go
 func (r *MyAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
     // Carregar o CR
@@ -102,6 +107,7 @@ func (r *MyAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 ```
 
 ### Fluxo de Reconciliação com OwnerReferences
+
 ```mermaid
 flowchart TD
     A[Controller] -->|Detecta mudança| B[Reconcile]
