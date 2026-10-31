@@ -7,59 +7,60 @@ Este guia descreve os passos para configurar um ambiente de desenvolvimento para
 - Linux Ubuntu/Debian
 - Acesso sudo
 - Conhecimento básico de Kubernetes e Go
+- Cerca de 3 GB livres em disco para a imagem do node, o cache do Go e os binários do envtest
 
 ## Configuração do Ambiente
 
-### 1. Configure o KUBECONFIG
+Os scripts vêm do clone deste repositório. Rode os comandos a partir da raiz dele.
 
-Primeiro, configure um KUBECONFIG específico para este ambiente de desenvolvimento:
-
-```bash
-# Configure o KUBECONFIG para um arquivo dedicado
-export KUBECONFIG=$HOME/.kube/k8s-operators-lab-config
-```
-
-### 2. Instale as Ferramentas
-
-Execute o script de setup que instalará todas as ferramentas necessárias:
+### 1. Instale as Ferramentas
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/cloud104/tcloud-devops-k8s-operators-training/main/scripts/setup-tools.sh | bash
+scripts/setup-tools.sh
 ```
-O script instalará:
 
-- Go 1.23+
-- Docker
-- Kind (Kubernetes in Docker)
-- kubectl
-- Kubebuilder
-- Kustomize
-- Tilt
+O script instala o que faltar, nas versões pinadas no topo dele. O que já existe não é trocado: se a versão divergir,
+ele avisa com `[AVISO]`.
 
-### 3. Aplique as Alterações
+| Ferramenta | Versão |
+|---|---|
+| Go | 1.26.8 |
+| Docker | a do repositório oficial |
+| kind | 0.33.0 |
+| kubectl | 1.37.0 |
+| Kubebuilder | 4.16.0 |
+| Kustomize | 5.8.1 |
+| Tilt | 0.37.8 |
+
+`SKIP_APT=1` pula o `apt-get`, e `BIN_DIR=<dir>` instala os binários em outro diretório, sem sudo.
+
+### 2. Aplique as Alterações
 
 ```bash
-# Carregue as novas configurações do ambiente
-source ~/.bashrc
+source ~/.bashrc   # ou ~/.zshrc
 ```
 
-- IMPORTANTE: Faça logout e login para aplicar as mudanças do grupo docker
+- IMPORTANTE: na primeira instalação do Docker, faça logout e login para aplicar o grupo `docker`
+
+### 3. Crie o Cluster
+
+Use um KUBECONFIG dedicado, para não tocar nos seus outros clusters:
+
+```bash
+export KUBECONFIG="$HOME/.kube/k8s-operators-lab-config"
+scripts/setup-cluster.sh
+```
 
 ### 4. Verifique a Instalação
 
-Confira se tudo foi instalado corretamente:
-
 ```bash
-# Verifique as versões instaladas
-go version         # Deve mostrar Go 1.23+
-docker version     # Deve mostrar cliente e servidor
-kind version       # Deve mostrar a versão do Kind
+go version
+docker version
+kind version
 kubebuilder version
 kubectl version
 tilt version
-
-# Verifique o cluster
-kubectl cluster-info  # Deve mostrar o cluster Kind
+kubectl cluster-info
 ```
 
 ## Problemas Comuns
@@ -70,11 +71,14 @@ kubectl cluster-info  # Deve mostrar o cluster Kind
 
 2. **Cluster Kind não inicia**
    - Verifique se o Docker está rodando: `systemctl status docker`
-   - Verifique se as portas necessárias estão livres: `lsof -i :80 -i :443`
+   - Verifique se a porta do NodePort está livre: `ss -ltn | grep 30000`
 
 3. **KUBECONFIG não configurado**
-   - Execute novamente o export do KUBECONFIG
-   - Verifique se o diretório foi criado: `ls -la $KUBECONFIG`
+   - Execute novamente o export do KUBECONFIG, em cada terminal
+   - Confira: `kubectl config current-context` deve mostrar `kind-k8s-operators-lab`
+
+4. **Porta 30000 ocupada**
+   - O cluster mapeia essa porta no host: `ss -ltn | grep 30000`
 
 ## Limpeza
 
@@ -83,4 +87,5 @@ Para remover o ambiente de desenvolvimento:
 ```bash
 # Remova o cluster Kind
 kind delete cluster --name k8s-operators-lab
+rm -f "$HOME/.kube/k8s-operators-lab-config"
 ```
