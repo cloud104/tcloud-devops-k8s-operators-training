@@ -1,15 +1,15 @@
 #!/bin/bash
 
 ###############################################################################
-# Setup Cluster Kind com Registry Local
+# Setup Cluster Kind do lab
 ###############################################################################
 
 set -euo pipefail
 
 # Configurações
-readonly REG_NAME='kind-registry'
-readonly REG_PORT='5001'
 readonly CLUSTER_NAME='k8s-operators-lab'
+# Imagem default do kind 0.33.0: mesma versão, com digest
+readonly NODE_IMAGE='kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5'
 
 # Cores para logging
 readonly VERMELHO='\033[0;31m'
@@ -36,28 +36,17 @@ comando_existe() {
     command -v "$1" >/dev/null 2>&1
 }
 
-configurar_registry() {
-    log "INFO" "Configurando registry local..."
-    
-    # Remove registry existente se houver
-    docker container rm -f "${REG_NAME}" 2>/dev/null || true
-    
-    # Cria registry local
-    docker run -d --restart=always -p "127.0.0.1:${REG_PORT}:5000" --name "${REG_NAME}" registry:2
-    
-    log "SUCESSO" "Registry local configurado"
-}
-
 criar_cluster() {
+    if kind get clusters 2>/dev/null | grep -qx "${CLUSTER_NAME}"; then
+        log "AVISO" "Cluster ${CLUSTER_NAME} já existe, nada a fazer"
+        return
+    fi
+
     log "INFO" "Criando cluster Kind..."
-    
-    cat <<EOF | kind create cluster --name "${CLUSTER_NAME}" --config=-
+
+    cat <<EOF | kind create cluster --name "${CLUSTER_NAME}" --image "${NODE_IMAGE}" --config=-
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
-containerdConfigPatches:
-- |-
-  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:${REG_PORT}"]
-    endpoint = ["http://${REG_NAME}:5000"]
 nodes:
 - role: control-plane
   extraPortMappings:
@@ -65,22 +54,8 @@ nodes:
     hostPort: 30000
     protocol: TCP
 EOF
-    
-    log "SUCESSO" "Cluster Kind criado"
-}
 
-configurar_registry_nodes() {
-    log "INFO" "Conectando registry ao cluster..."
-    
-    # Conecta o registry à rede do Kind
-    docker network connect "kind" "${REG_NAME}" || true
-    
-    # Configura os nodes para usar o registry local
-    for node in $(kind get nodes --name "${CLUSTER_NAME}"); do
-        kubectl annotate node "${node}" "kind.x-k8s.io/registry=localhost:${REG_PORT}" || true
-    done
-    
-    log "SUCESSO" "Registry conectado ao cluster"
+    log "SUCESSO" "Cluster Kind criado"
 }
 
 ###############################################################################
@@ -97,28 +72,10 @@ for cmd in docker kind kubectl; do
     fi
 done
 
-configurar_registry
 criar_cluster
-configurar_registry_nodes
-
-# Configura registry local no cluster
-cat <<EOF | kubectl apply -f -
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: local-registry-hosting
-  namespace: kube-public
-data:
-  localRegistryHosting.v1: |
-    host: "localhost:${REG_PORT}"
-    help: "https://kind.sigs.k8s.io/docs/user/local-registry/"
-EOF
 
 log "SUCESSO" "Ambiente Kind configurado com sucesso!"
-log "INFO" "Configurações do ambiente:"
-log "INFO" "- Registry local: localhost:${REG_PORT}"
-log "INFO" "- Para publicar imagens: docker push localhost:${REG_PORT}/sua-imagem"
-log "INFO" "- NodePort disponível na porta 30000 (host) -> 30000 (container)"
-log "INFO" "- Para acessar serviços NodePort: http://localhost:30000"
 log "INFO" "- Cluster name: ${CLUSTER_NAME}"
-log "INFO" "- Para verificar o status do cluster: kubectl cluster-info"
+log "INFO" "- Contexto: kind-${CLUSTER_NAME}"
+log "INFO" "- NodePort disponível na porta 30000 (host) -> 30000 (container)"
+log "INFO" "- O Tilt carrega as imagens direto no node (kind load), sem registry"

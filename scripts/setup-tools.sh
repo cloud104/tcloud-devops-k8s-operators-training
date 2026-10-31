@@ -6,6 +6,17 @@
 
 set -euo pipefail
 
+# Versões pinadas: alterar aqui e conferir os docs e o scaffold juntos
+readonly GO_VERSION='1.26.8'
+readonly KIND_VERSION='0.33.0'
+readonly KUBECTL_VERSION='1.37.0'
+readonly KUBEBUILDER_VERSION='4.16.0'
+readonly KUSTOMIZE_VERSION='5.8.1'
+readonly TILT_VERSION='0.37.8'
+
+# Destino dos binários; BIN_DIR permite instalar sem sudo
+readonly BIN_DIR="${BIN_DIR:-/usr/local/bin}"
+
 # Cores para logging
 readonly VERMELHO='\033[0;31m'
 readonly VERDE='\033[0;32m'
@@ -31,20 +42,42 @@ comando_existe() {
     command -v "$1" >/dev/null 2>&1
 }
 
+# Instala um binário em BIN_DIR, com sudo só se o diretório não for gravável
+instalar_binario() {
+    mkdir -p "$BIN_DIR" 2>/dev/null || true
+    if [ -w "$BIN_DIR" ]; then
+        install -m 0755 "$1" "$BIN_DIR/$2"
+    else
+        sudo install -m 0755 "$1" "$BIN_DIR/$2"
+    fi
+    rm -f "$1"
+}
+
+# Avisa quando a ferramenta já instalada difere da versão pinada
+conferir_versao() {
+    local nome=$1 esperada=$2 atual=$3
+    if [[ "$atual" == *"$esperada"* ]]; then
+        log "INFO" "$nome $esperada já está instalado"
+    else
+        log "AVISO" "$nome instalado difere do pinado ($esperada): $atual"
+    fi
+}
+
 # Funções de instalação
 instalar_go() {
-    if ! comando_existe go; then
-        log "INFO" "Instalando Go..."
-        wget -q https://golang.org/dl/go1.21.6.linux-amd64.tar.gz
-        sudo rm -rf /usr/local/go 
-        sudo tar -C /usr/local -xzf go1.21.6.linux-amd64.tar.gz
-        rm go1.21.6.linux-amd64.tar.gz
-        echo 'export PATH=$PATH:/usr/local/go/bin' >> "$PROFILE_FILE"
-        echo 'export PATH=$PATH:$(go env GOPATH)/bin' >> "$PROFILE_FILE"
-        log "SUCESSO" "Go instalado"
-    else
-        log "INFO" "Go já está instalado"
+    if comando_existe go; then
+        conferir_versao "Go" "go$GO_VERSION" "$(go version)"
+        return
     fi
+    log "INFO" "Instalando Go $GO_VERSION..."
+    curl -fsSLo go.tar.gz "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz"
+    sudo rm -rf /usr/local/go
+    sudo tar -C /usr/local -xzf go.tar.gz
+    rm go.tar.gz
+    echo 'export PATH=$PATH:/usr/local/go/bin' >> "$PROFILE_FILE"
+    echo 'export PATH=$PATH:$HOME/go/bin' >> "$PROFILE_FILE"
+    export PATH="$PATH:/usr/local/go/bin"
+    log "SUCESSO" "Go instalado"
 }
 
 instalar_docker() {
@@ -68,60 +101,58 @@ instalar_docker() {
 }
 
 instalar_kind() {
-    if ! comando_existe kind; then
-        log "INFO" "Instalando Kind..."
-        curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
-        chmod +x ./kind
-        sudo mv ./kind /usr/local/bin/kind
-        log "SUCESSO" "Kind instalado"
-    else
-        log "INFO" "Kind já está instalado"
+    if comando_existe kind; then
+        conferir_versao "Kind" "v$KIND_VERSION" "$(kind version)"
+        return
     fi
+    log "INFO" "Instalando Kind $KIND_VERSION..."
+    curl -fsSLo kind "https://kind.sigs.k8s.io/dl/v${KIND_VERSION}/kind-linux-amd64"
+    instalar_binario kind kind
+    log "SUCESSO" "Kind instalado"
 }
 
 instalar_kubectl() {
-    if ! comando_existe kubectl; then
-        log "INFO" "Instalando kubectl..."
-        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-        chmod +x kubectl
-        sudo mv kubectl /usr/local/bin/
-        log "SUCESSO" "kubectl instalado"
-    else
-        log "INFO" "kubectl já está instalado"
+    if comando_existe kubectl; then
+        conferir_versao "kubectl" "v$KUBECTL_VERSION" "$(kubectl version --client 2>/dev/null | head -1)"
+        return
     fi
+    log "INFO" "Instalando kubectl $KUBECTL_VERSION..."
+    curl -fsSLo kubectl "https://dl.k8s.io/release/v${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+    instalar_binario kubectl kubectl
+    log "SUCESSO" "kubectl instalado"
 }
 
 instalar_kubebuilder() {
-    if ! comando_existe kubebuilder; then
-        log "INFO" "Instalando Kubebuilder..."
-        curl -L -o kubebuilder https://go.kubebuilder.io/dl/latest/$(go env GOOS)/$(go env GOARCH)
-        chmod +x kubebuilder
-        sudo mv kubebuilder /usr/local/bin/
-        log "SUCESSO" "Kubebuilder instalado"
-    else
-        log "INFO" "Kubebuilder já está instalado"
+    if comando_existe kubebuilder; then
+        conferir_versao "Kubebuilder" "$KUBEBUILDER_VERSION" "$(kubebuilder version | head -1)"
+        return
     fi
+    log "INFO" "Instalando Kubebuilder $KUBEBUILDER_VERSION..."
+    curl -fsSLo kubebuilder "https://github.com/kubernetes-sigs/kubebuilder/releases/download/v${KUBEBUILDER_VERSION}/kubebuilder_linux_amd64"
+    instalar_binario kubebuilder kubebuilder
+    log "SUCESSO" "Kubebuilder instalado"
 }
 
 instalar_kustomize() {
-    if ! comando_existe kustomize; then
-        log "INFO" "Instalando Kustomize..."
-        curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
-        sudo mv kustomize /usr/local/bin/
-        log "SUCESSO" "Kustomize instalado"
-    else
-        log "INFO" "Kustomize já está instalado"
+    if comando_existe kustomize; then
+        conferir_versao "Kustomize" "$KUSTOMIZE_VERSION" "$(kustomize version)"
+        return
     fi
+    log "INFO" "Instalando Kustomize $KUSTOMIZE_VERSION..."
+    curl -fsSL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_linux_amd64.tar.gz" | tar -xz kustomize
+    instalar_binario kustomize kustomize
+    log "SUCESSO" "Kustomize instalado"
 }
 
 instalar_tilt() {
-    if ! comando_existe tilt; then
-        log "INFO" "Instalando Tilt..."
-        curl -fsSL https://raw.githubusercontent.com/tilt-dev/tilt/master/scripts/install.sh | bash
-        log "SUCESSO" "Tilt instalado"
-    else
-        log "INFO" "Tilt já está instalado"
+    if comando_existe tilt; then
+        conferir_versao "Tilt" "v$TILT_VERSION" "$(tilt version)"
+        return
     fi
+    log "INFO" "Instalando Tilt $TILT_VERSION..."
+    curl -fsSL "https://github.com/tilt-dev/tilt/releases/download/v${TILT_VERSION}/tilt.${TILT_VERSION}.linux.x86_64.tar.gz" | tar -xz tilt
+    instalar_binario tilt tilt
+    log "SUCESSO" "Tilt instalado"
 }
 
 verificar_versoes() {
@@ -152,18 +183,12 @@ case "$USER_SHELL" in
     *) log "AVISO" "Shell não suportado: $USER_SHELL" ;;
 esac
 
-# Update do sistema
-log "INFO" "Atualizando sistema..."
-if sudo apt-get update -y && sudo apt-get upgrade -y; then
-    log "SUCESSO" "Sistema atualizado"
-else
-    log "ERRO" "Falha ao atualizar sistema"
-    exit 1
+# Dependências básicas; SKIP_APT=1 pula quando já estão instaladas
+if [ -z "${SKIP_APT:-}" ]; then
+    log "INFO" "Instalando dependências básicas..."
+    sudo apt-get update -y
+    sudo apt-get install -y curl git make gcc
 fi
-
-# Dependências básicas
-log "INFO" "Instalando dependências básicas..."
-sudo apt-get install -y curl wget git make gcc
 
 # Instalação das ferramentas
 instalar_go
@@ -184,6 +209,6 @@ echo -e "${VERDE}2.${NC} Verifique se você foi adicionado ao grupo 'docker':"
 echo -e "   ${AMARELO}groups | grep docker${NC}"
 echo -e "${VERDE}3.${NC} Caso não apareça o grupo 'docker', faça logout e login novamente"
 echo -e "${VERDE}4.${NC} Para verificar a instalação, execute:"
-echo -e "   ${AMARELO}./setup-cluster.sh${NC}"
+echo -e "   ${AMARELO}scripts/setup-cluster.sh${NC}"
 echo
 log "INFO" "Para mais informações, consulte a documentação do projeto"

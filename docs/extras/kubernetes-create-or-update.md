@@ -13,6 +13,9 @@ op, err := ctrl.CreateOrUpdate(ctx, r.Client, deploy, func() error {
 })
 ```
 
+A função de mutação deve definir só os campos que são do operator. Atribuir `deploy.Spec = ...` inteiro apaga o que o
+API Server preencheu: no Service, o `clusterIP`. Cada reconcile vira uma escrita, ou um erro.
+
 ### Fluxo de Execução
 
 ```mermaid
