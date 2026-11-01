@@ -5,8 +5,8 @@ vivo pelo instrutor, e ninguém prepara máquina.
 
 Público: Go e Kubernetes básicos. Não conhece controller nem o produto.
 
-Os comandos do lab vêm prontos em [`03-desenvolvimento.md`](03-desenvolvimento.md). A demo do encerramento tem runbook
-próprio, no repositório privado do operator, porque depende do produto.
+Os comandos do lab vêm prontos em [`03-desenvolvimento.md`](03-desenvolvimento.md). A demo do encerramento tem guia
+interno próprio, porque depende do produto.
 
 ## Tempos
 
@@ -35,7 +35,7 @@ com cache frio não foi medido. Por isso o preparo é obrigatório.
 Na véspera, com o repositório clonado e as ferramentas de [`02-setup-ambiente.md`](02-setup-ambiente.md):
 
 1. Rode o [lab](03-desenvolvimento.md) inteiro uma vez: aquece o cache do Go e baixa os binários do envtest.
-2. Prepare a demo pelo runbook privado.
+2. Prepare a demo pelo guia interno.
 3. Confira 3 GB livres em disco e as portas 30000 e 10350.
 
 Na hora: dois terminais com fonte grande, editor aberto, e o terminal do log do manager sempre à vista.
@@ -163,7 +163,7 @@ Depois: Ctrl+C e a [limpeza](03-desenvolvimento.md#limpeza).
 
 **Objetivo:** reconhecer no código real o que acabou de ser escrito.
 
-**Mostrar:** a tabela conceito → arquivo do runbook privado, abrindo a chain e o teste que trava a ordem dela.
+**Mostrar:** a tabela conceito → arquivo do guia interno, abrindo a chain e o teste que trava a ordem dela.
 
 **Dizer:** "É o mesmo desenho, com mais nós. A maior parte do que vocês vão ver lá tem um equivalente pequeno no lab."
 
@@ -176,7 +176,7 @@ Depois: Ctrl+C e a [limpeza](03-desenvolvimento.md#limpeza).
 **Objetivo:** ver o operator real provisionando o produto real no cluster de dev, a partir de um manifesto, e abrir o
 frontend pelo domínio público.
 
-**Mostrar e comandos:** a sequência ao vivo do runbook privado, que traz os comandos, uma tabela de minutos e três
+**Mostrar e comandos:** a sequência ao vivo do guia interno, que traz os comandos, uma tabela de minutos e três
 diagramas para a tela:
 
 1. **Antes do `apply`:** o log do manager num segundo terminal e a leitura do manifesto, campo a campo, comparado ao
@@ -190,12 +190,12 @@ diagramas para a tela:
 **Dizer:** "O que fiz foi um `kubectl apply`. Quem sabe a ordem é o operator."
 
 **Saída esperada:** `Ready` em cerca de 2 minutos, a tela de login no link e um Service apagado de volta em menos de 1 s. Se o
-Orchestrator não estabilizar em 10 minutos, vá para a contingência do runbook.
+Orchestrator não estabilizar em 10 minutos, vá para a contingência do guia interno.
 
 ## Bloco 8: Perguntas e próximos passos
 
 **2:55, 5 min.**
 
-**Mostrar:** as [leituras extras](extras/README.md), o guia e os runbooks do operator.
+**Mostrar:** as [leituras extras](extras/README.md) e a documentação interna do operator.
 
 **Dizer:** qual é a primeira tarefa de cada um e por onde começar a ler.
