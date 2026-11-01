@@ -175,8 +175,16 @@ Depois: Ctrl+C e a [limpeza](03-desenvolvimento.md#limpeza).
 **Objetivo:** ver o operator real provisionando o produto real no cluster de dev, a partir de um manifesto, e abrir o
 frontend pelo domínio público.
 
-**Mostrar e comandos:** a sequência ao vivo do runbook privado: criar a topologia do zero com um manifesto, `Provisioning`
-até `Ready`, ordem de subida, conditions, recursos criados, link do frontend para a turma e um filho apagado voltando.
+**Mostrar e comandos:** a sequência ao vivo do runbook privado, que traz os comandos, uma tabela de minutos e três
+diagramas para a tela:
+
+1. **Antes do `apply`:** o log do manager num segundo terminal e a leitura do manifesto, campo a campo, comparado ao
+   `SampleApp`. Explique a estrutura: dois controllers, o da topologia, que cria um workload por componente, e o do
+   workload, que cria o Deployment e o Service. É o `Owns()` do lab em dois níveis.
+2. **Durante o `apply`:** a topologia criada do zero, de `Provisioning` até `Ready`. Enquanto o `-w` roda, leia as colunas
+   e narre a ordem de subida: os workers nascem com zero réplicas e só sobem quando o componente central fica estável.
+3. **Depois:** as conditions na ordem da chain, os recursos criados, o link do frontend para a turma e um filho apagado
+   voltando.
 
 **Dizer:** "O que fiz foi um `kubectl apply`. Quem sabe a ordem é o operator."
 
