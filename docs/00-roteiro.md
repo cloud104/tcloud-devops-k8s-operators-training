@@ -19,7 +19,7 @@ interno próprio, porque depende do produto.
 | 1:25 | [Lab 2](#bloco-4-lab-2) | 45 min | 20 s | não; só 2.6 encurta |
 | 2:10 | [Lab 3](#bloco-5-lab-3) | 15 min | 1 min 45 s | não |
 | 2:25 | [Do lab ao PDV](#bloco-6-do-lab-ao-pdv) | 10 min | - | sim, até 5 min |
-| 2:35 | [Demo](#bloco-7-demo) | 20 min | 2 min até `Ready`, até 5 min no link | não |
+| 2:35 | [Demo](#bloco-7-demo) | 20 min | 1 min no link, 2 min até `Ready` | não |
 | 2:55 | [Perguntas](#bloco-8-perguntas-e-próximos-passos) | 5 min | - | sim |
 | 3:00 | Fim | | | |
 
@@ -189,9 +189,10 @@ diagramas para a tela:
 
 **Dizer:** "O que fiz foi um `kubectl apply`. Quem sabe a ordem é o operator."
 
-**Saída esperada:** `Ready` em cerca de 2 minutos. A tela de login vem depois: o link foi medido em 5 minutos, numa amostra só, e
-responde 404 até lá. Abra-o só depois do `Ready`, avise a turma e siga para as conditions enquanto ele não sobe. Um Service
-apagado volta em menos de 1 s. Se o Orchestrator não estabilizar em 10 minutos, vá para a contingência do guia interno.
+**Saída esperada:** `Ready` em cerca de 2 minutos, a tela de login no link cerca de 1 minuto depois do `apply` e um Service
+apagado de volta em menos de 1 s. **Ninguém abre nem testa o link nos 5 minutos antes do `apply`**, nem por `curl`, navegador ou
+preview de chat: com a topologia ausente, o DNS guarda um registro que responde 404 por até 5 minutos. Se der 404, é esse
+cache: aguarde ou troque de resolvedor, e siga pelas conditions. Se o Orchestrator não estabilizar em 10 minutos, vá para a contingência do guia interno.
 
 ## Bloco 8: Perguntas e próximos passos
 
