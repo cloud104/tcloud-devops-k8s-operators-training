@@ -48,13 +48,14 @@ Na hora: dois terminais com fonte grande, editor aberto, e o terminal do log do 
 
 **Mostrar:** a primeira seção de [`01-conceitos-basicos.md`](01-conceitos-basicos.md) e, sem código, a forma do
 operator do PDV: uma `PdvTopology` por cliente, um namespace por topologia, um produto com vários componentes, broker,
-cache e share próprios, banco fora do cluster.
+cache e share próprios, banco fora do cluster. Na demo, por exceção, o Oracle de teste roda no
+namespace.
 
 **Dizer:** "Um Deployment mantém réplicas. Ele não sabe que um componente tem de subir antes do outro, nem que reiniciá-lo
 com os workers no ar quebra tudo. Esse conhecimento morava num runbook; o operator é esse runbook virando código."
 
-**Combinar:** o que existe hoje. O produto completo subiu no dev do TKS, com banco de teste. Não há provisionamento pelo
-Portal, e ele ainda não roda em hmg nem em produção.
+**Combinar:** o que existe hoje. O produto completo subiu no dev do TKS, com banco de teste. O Portal existe, mas o PDV
+ainda não está integrado a ele, e o operator ainda não roda em hmg nem em produção.
 
 **Saída esperada:** ninguém ainda vê terminal. O time sabe dizer por que um Deployment não basta.
 
@@ -164,7 +165,7 @@ Depois: Ctrl+C e a [limpeza](03-desenvolvimento.md#limpeza).
 
 **Mostrar:** a tabela conceito → arquivo do runbook privado, abrindo a chain e o teste que trava a ordem dela.
 
-**Dizer:** "É o mesmo desenho, com mais nós. Tudo que vocês vão ver lá tem um equivalente pequeno no lab."
+**Dizer:** "É o mesmo desenho, com mais nós. A maior parte do que vocês vão ver lá tem um equivalente pequeno no lab."
 
 **Saída esperada:** o time sabe onde abrir o código na primeira tarefa.
 
