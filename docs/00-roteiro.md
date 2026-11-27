@@ -54,8 +54,8 @@ namespace.
 **Dizer:** "Um Deployment mantém réplicas. Ele não sabe que um componente tem de subir antes do outro, nem que reiniciá-lo
 com os workers no ar quebra tudo. Esse conhecimento morava num runbook; o operator é esse runbook virando código."
 
-**Combinar:** o que existe hoje. O produto completo subiu no cluster de dev, com banco de teste. O portal existe, mas o produto
-ainda não está integrado a ele, e o operator ainda não roda em hmg nem em produção.
+**Combinar:** o que existe hoje. O produto completo subiu no cluster de dev, com banco de teste. O portal existe, mas o
+produto ainda não está integrado a ele, e o operator ainda não roda em hmg nem em produção.
 
 **Saída esperada:** ninguém ainda vê terminal. O time sabe dizer por que um Deployment não basta.
 
