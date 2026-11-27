@@ -60,15 +60,16 @@ flowchart TD
     V1 --> STORE
 ```
 
-O controller-runtime usa um modelo **Hub-and-Spoke**, não uma cadeia. A *storage version* é o **Hub**; cada outra
-versão é um **Spoke** que converte direto de/para o Hub. Não existe `v1alpha1 → v1beta1 → v1`: todo spoke fala com o
+O controller-runtime usa um modelo **Hub-and-Spoke**, não uma cadeia. Uma versão é escolhida como **Hub** (em geral a
+*storage version*, mas é você quem marca o hub, e as duas coisas são independentes); cada outra versão é um **Spoke**
+que converte direto de/para o Hub. Não existe `v1alpha1 → v1beta1 → v1`: todo spoke fala com o
 hub. O handler de conversão genérico chama os métodos abaixo (pacote `sigs.k8s.io/controller-runtime/pkg/conversion`):
 
 Cada método é declarado **no pacote do próprio tipo** (receiver sem qualificar; Go não deixa declarar método num tipo
 de outro pacote):
 
 ```go
-// api/v1/myapp_conversion.go — a storage version (hub) só se marca como hub:
+// api/v1/myapp_conversion.go — a versão hub (aqui, também a storage version) só se marca como hub:
 func (*MyApp) Hub() {}
 ```
 
@@ -197,12 +198,15 @@ flowchart TD
 ```
 
 Na prática você quase nunca constrói a fila à mão: o controller já usa `workqueue.DefaultTypedControllerRateLimiter[reconcile.Request]()`
-(backoff exponencial de 5 ms a 1000 s, com um teto por token bucket). Para trocar, passe `RateLimiter` em
-`SetupWithManager` via `controller.Options`. As filas do client-go hoje são **genéricas** (tipadas) — o k8s 1.37 deste
+(backoff exponencial **por objeto**, de 5 ms a 1000 s, combinado com um token bucket **global** de 10 qps e rajada
+de 100, que só limita a velocidade dos retries). Com a fila de prioridade ligada, que é o padrão nas versões recentes
+do controller-runtime (conferido da v0.24 em diante), o default é só o backoff por objeto, sem o bucket global: veja
+`UsePriorityQueue` em `controller.Options`. Para trocar, passe `RateLimiter` em `SetupWithManager` via
+`controller.Options`. As filas do client-go hoje são **genéricas** (tipadas) — o k8s 1.37 deste
 treinamento já as usa:
 
 ```go
-// Equivalente ao default, montado à mão (note os tipos):
+// Equivalente ao DefaultTypedControllerRateLimiter, montado à mão (note os tipos):
 workqueue.NewTypedRateLimitingQueue(workqueue.NewTypedMaxOfRateLimiter[reconcile.Request](
     workqueue.NewTypedItemExponentialFailureRateLimiter[reconcile.Request](5*time.Millisecond, 1000*time.Second),
     &workqueue.TypedBucketRateLimiter[reconcile.Request]{Limiter: rate.NewLimiter(rate.Limit(10), 100)},
@@ -236,6 +240,10 @@ flowchart LR
 ```
 
 ### Métricas Customizadas
+
+O controller-runtime já expõe, sem código seu, `controller_runtime_reconcile_total{controller,result}`,
+`controller_runtime_reconcile_errors_total`, `controller_runtime_reconcile_time_seconds` e as `workqueue_*` da fila.
+Crie métricas próprias só para o que é do seu domínio, com prefixo seu:
 
 ```go
 var (

@@ -178,7 +178,9 @@ escreve no dia a dia é o `SetupWithManager`.
 
 ## Boas práticas
 
-- **Leia sempre do cache** (o `Get`/`List` do client do manager), nunca direto do API Server: é o ganho do informer.
+- **Leia do cache por padrão** (o `Get`/`List` do client do manager): é o ganho do informer. Ler direto do API Server
+  é exceção, via `mgr.GetAPIReader()`, quando a leitura precisa ser a mais recente (logo após uma escrita sua, por
+  exemplo) ou o tipo não está no cache.
 - **O cache pode estar atrasado** em relação ao cluster; o loop level-triggered absorve isso, mas não assuma que uma
   escrita sua aparece na leitura seguinte.
 - **Espere o cache sincronizar** antes de reconciliar — o manager já faz isso no boot (`WaitForCacheSync`).

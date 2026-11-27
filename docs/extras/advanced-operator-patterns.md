@@ -227,11 +227,14 @@ flowchart LR
 
 #### Exemplo de Métricas
 
+O controller-runtime já publica `controller_runtime_reconcile_total{controller,result}` e
+`controller_runtime_reconcile_time_seconds`. O exemplo abaixo é uma métrica a mais, do domínio do operator:
+
 ```go
 var (
     reconcileTotal = prometheus.NewCounterVec(
         prometheus.CounterOpts{
-            Name: "controller_reconcile_total",
+            Name: "myapp_reconcile_total", // do seu domínio; não repita as do controller-runtime
             Help: "Total de reconciliações",
         },
         []string{"result"},
